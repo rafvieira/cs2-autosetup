@@ -1,13 +1,13 @@
 # Arquivos de configuração pessoal e testes
 *.cfg
-!autoexec.cfg # Ignora todos os .cfg exceto o modelo se você quiser deixar um de exemplo
+!autoexec.cfg
 
 # Logs e arquivos temporários
 *.log
 *.tmp
 *.temp
 
-# Pastas de IDE (VS Code / Antigravity)
+# Pastas de IDE
 .vscode/
 .history/
 
