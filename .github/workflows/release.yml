@@ -13,7 +13,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: main # Força o robô a estar na branch main, evitando Detached HEAD
+          ref: main # Garante que o robô trabalhe na branch main para evitar Detached HEAD
 
       - name: Get Version and Commits
         id: vars
@@ -23,7 +23,7 @@ jobs:
           VERSION=${TAG#v}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           
-          # Pegar commits desde a última tag
+          # Pegar commits desde a última tag (mínimo de 1 commit)
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
           if [ -z "$PREV_TAG" ]; then
             COMMITS=$(git log --pretty=format:"- %s")
@@ -31,7 +31,7 @@ jobs:
             COMMITS=$(git log $PREV_TAG..HEAD --pretty=format:"- %s")
           fi
           
-          # Salvar commits (Multine variable)
+          # Salvar commits de forma segura para o GitHub
           {
             echo "commits<<EOF"
             echo "$COMMITS"
@@ -40,25 +40,24 @@ jobs:
 
       - name: Update Script Version
         run: |
-          # Atualiza a variável no PowerShell
+          # Atualiza a variável $VERSION no arquivo .ps1
           sed -i "s/\$VERSION = \".*\" # \[AUTO-UPDATE-VERSION\]/\$VERSION = \"${{ steps.vars.outputs.version }}\" # \[AUTO-UPDATE-VERSION\]/g" og_cs2_tool.ps1
 
       - name: Update CHANGELOG.md
         run: |
           DATE=$(date +'%Y-%m-%d')
-          # Cria um arquivo temporário com a nova entrada
+          # Cria nova entrada
           echo -e "## [${{ steps.vars.outputs.version }}] - $DATE\n${{ steps.vars.outputs.commits }}\n" > new_entry.md
           
-          # Se o Changelog já existe, anexa o resto. Se não, cria um cabeçalho.
+          # Se o arquivo já existir, remove o título temporariamente para reconstruir
           if [ -f CHANGELOG.md ]; then
-            # Remove o título antigo temporariamente para não duplicar
             sed -i '1{/^# Changelog/d}' CHANGELOG.md
             cat new_entry.md CHANGELOG.md > temp_ch.md
           else
             cat new_entry.md > temp_ch.md
           fi
           
-          # Adiciona o título fixo no topo
+          # Reconstrói o arquivo com o título oficial no topo
           echo -e "# Changelog - CS2 ACT (Autoconfig Tool)\n\n$(cat temp_ch.md)" > CHANGELOG.md
           rm new_entry.md temp_ch.md
 
@@ -67,5 +66,6 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add og_cs2_tool.ps1 CHANGELOG.md
+          # [skip ci] evita loop infinito
           git commit -m "chore: atualizando para v${{ steps.vars.outputs.version }} [skip ci]"
           git push origin main
