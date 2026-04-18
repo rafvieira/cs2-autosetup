@@ -1,0 +1,153 @@
+# ============================================================
+# ONLYGOES INFORMÁTICA E TECNOLOGIA - CS2 AUTOCONFIG TOOL
+# Versão Unificada: Setup, Extração e Restauração
+# ============================================================
+
+# --- CONFIGURAÇÕES ESTÁTICAS (Antiga Seção 1) ---
+$APPID      = 730
+$APPNAME    = "cs2"
+$INSTALLDIR = "Counter-Strike Global Offensive"
+$MOD        = "csgo"
+$USER_VCFG  = "${APPNAME}_user_convars_0_slot0.vcfg"
+$KEYS_VCFG  = "${APPNAME}_user_keys_0_slot0.vcfg"
+$MACH_VCFG  = "${APPNAME}_machine_convars.vcfg"
+$VIDEO_TXT  = "${APPNAME}_video.txt"
+
+# --- FUNÇÕES DE SUPORTE ---
+
+function Get-ContasSteam {
+    $SteamRegPath = "HKCU:\SOFTWARE\Valve\Steam"
+    if (-not (Test-Path $SteamRegPath)) { return $null }
+    $SteamPath = (Get-ItemPropertyValue $SteamRegPath SteamPath)
+    $Contas = @()
+    if (Test-Path "$SteamPath\userdata") {
+        Push-Location "$SteamPath\userdata"
+        Get-ChildItem -Directory | Where-Object { $_.Name -match '^\d+$' } | ForEach-Object {
+            $conf = "$($_.FullName)\config\localconfig.vdf"
+            $nick = "Desconhecido"
+            if (Test-Path $conf) {
+                $match = Get-Content $conf -ErrorAction SilentlyContinue | Select-String -Pattern '"PersonaName"\s+"([^"]+)"'
+                if ($match) { $nick = $match.Matches.Groups[1].Value }
+            }
+            $Contas += [PSCustomObject]@{ ID = $_.Name; Nick = $nick; Path = $_.FullName }
+        }
+        Pop-Location
+    }
+    return $Contas
+}
+
+function Escolher-Conta {
+    $Contas = Get-ContasSteam
+    if (-not $Contas) { Write-Host "ERRO: Nenhuma conta Steam encontrada." -ForegroundColor Red; return $null }
+    Write-Host "`n=============================================" -ForegroundColor Cyan
+    Write-Host " SELECIONE A CONTA" -ForegroundColor Yellow
+    Write-Host "=============================================" -ForegroundColor Cyan
+    for ($i=0; $i -lt $Contas.Count; $i++) { Write-Host " [ $($i+1) ] - $($Contas[$i].Nick) ($($Contas[$i].ID))" }
+    $sel = Read-Host "`nDigite o número"
+    if ($sel -match '^\d+$' -and $sel -gt 0 -and $sel -le $Contas.Count) { return $Contas[[int]$sel-1] }
+    return $null
+}
+
+# --- MÓDULOS PRINCIPAIS ---
+
+function Invoke-Setup {
+    $IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    if (-not $IsAdmin) { Write-Host "`n[ERRO] Execute como ADMINISTRADOR para instalar a Steam." -ForegroundColor Red; Start-Sleep -Seconds 3; return }
+    
+    if (-not (Test-Path "HKCU:\SOFTWARE\Valve\Steam")) {
+        Write-Host "Instalando Steam via Winget..." -ForegroundColor Cyan
+        winget install Valve.Steam --silent --accept-source-agreements --accept-package-agreements | Out-Null
+    }
+    Start-Process "steam://install/730"
+    Read-Host "`nPressione ENTER quando o download do CS2 iniciar na Steam"
+    
+    Write-Host "Aguardando pastas do jogo..." -ForegroundColor Cyan
+    $SteamReg = "HKCU:\SOFTWARE\Valve\Steam"
+    $SteamP = (Get-ItemPropertyValue $SteamReg SteamPath)
+    $Concluido = $false
+    while (-not $Concluido) {
+        $Libs = Get-Content "$SteamP\steamapps\libraryfolders.vdf" -ErrorAction SilentlyContinue | Where-Object {$_ -like '*:\*'} | ForEach-Object { (Resolve-Path ($_ -split '"',5)[3]).Path }
+        foreach ($L in $Libs) { if (Test-Path "$L\steamapps\common\$using:INSTALLDIR\game\$using:MOD\cfg") { $Concluido = $true; break } }
+        if (-not $Concluido) { Write-Host "." -NoNewline; Start-Sleep -Seconds 5 }
+    }
+    Write-Host "`n[OK] Ambiente pronto!" -ForegroundColor Green; Start-Sleep -Seconds 2
+}
+
+function Invoke-Extract {
+    $Conta = Escolher-Conta
+    if (-not $Conta) { return }
+    
+    $SteamPath = (Get-ItemPropertyValue "HKCU:\SOFTWARE\Valve\Steam" SteamPath)
+    $USRLOCAL = "$($Conta.Path)\$using:APPID\local"
+    $autoexec = "$([Environment]::GetFolderPath('Desktop'))\autoexec.cfg"
+    
+    # Localizar a pasta do jogo para pegar arquivos globais
+    $GamePath = $null
+    $Libs = Get-Content "$SteamPath\steamapps\libraryfolders.vdf" -ErrorAction SilentlyContinue | Where-Object {$_ -like '*:\*'} | ForEach-Object { (Resolve-Path ($_ -split '"',5)[3]).Path }
+    foreach ($L in $Libs) { if (Test-Path "$L\steamapps\common\$using:INSTALLDIR\game\$using:MOD") { $GamePath = "$L\steamapps\common\$using:INSTALLDIR\game\$using:MOD"; break } }
+
+    # Sincronização Temporária (Antiga Seção 5)
+    $tempDir = "$env:temp\cs2_extract"
+    New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
+    if ($GamePath) { robocopy "$GamePath\cfg/" "$tempDir/" $using:USER_VCFG $using:KEYS_VCFG $using:MACH_VCFG $using:VIDEO_TXT /XO | Out-Null }
+    if (Test-Path "$USRLOCAL\cfg") { robocopy "$USRLOCAL\cfg/" "$tempDir/" $using:USER_VCFG $using:KEYS_VCFG $using:MACH_VCFG $using:VIDEO_TXT /XO | Out-Null }
+
+    # Processamento e Geração (Seções 6 a 9)
+    $sb = New-Object System.Text.StringBuilder
+    [void]$sb.AppendLine("// OnlyGoes Autoexec - Conta: $($Conta.Nick)")
+    
+    # Funçao auxiliar para ler VCFG
+    function Parse-VCFG($file, $header, $prefix = "") {
+        if (Test-Path $file) {
+            [void]$sb.AppendLine("`n// $header")
+            Get-Content $file | ForEach-Object {
+                $parts = $_ -split '"'
+                if ($parts.Count -eq 5) {
+                    $key = $parts[1]; $val = $parts[3]
+                    if ($prefix -eq "bind") { [void]$sb.AppendLine("bind `"$key`" `"$val`";") }
+                    else { [void]$sb.AppendLine("`"$($key.Split('$')[0])`" `"$val`";") }
+                }
+            }
+        }
+    }
+
+    Parse-VCFG "$tempDir\$using:KEYS_VCFG" "BINDS" "bind"
+    Parse-VCFG "$tempDir\$using:USER_VCFG" "USER CONVARS"
+    Parse-VCFG "$tempDir\$using:MACH_VCFG" "MACHINE SETTINGS"
+
+    $sb.ToString() | Set-Content $autoexec -Force
+    Write-Host "`n[OK] Autoexec gerado no Desktop!" -ForegroundColor Green; Start-Sleep -Seconds 3
+}
+
+function Invoke-Restore {
+    $Autoexec = "$([Environment]::GetFolderPath('Desktop'))\autoexec.cfg"
+    if (-not (Test-Path $Autoexec)) { Write-Host "`n[ERRO] autoexec.cfg não encontrado no Desktop!" -ForegroundColor Red; Start-Sleep -Seconds 3; return }
+    
+    $Conta = Escolher-Conta
+    if (-not $Conta) { return }
+    
+    $Destino = "$($Conta.Path)\$using:APPID\local\cfg"
+    if (-not (Test-Path $Destino)) { New-Item -ItemType Directory -Force -Path $Destino | Out-Null }
+    
+    Copy-Item -Path $Autoexec -Destination "$Destino\autoexec.cfg" -Force
+    Write-Host "`n[OK] Configurações aplicadas para $($Conta.Nick)!" -ForegroundColor Green; Start-Sleep -Seconds 3
+}
+
+# --- MENU PRINCIPAL ---
+do {
+    Clear-Host
+    Write-Host "=========================================" -ForegroundColor Cyan
+    Write-Host " ONLYGOES - CS2 AUTOCONFIG TOOL" -ForegroundColor Yellow
+    Write-Host "=========================================" -ForegroundColor Cyan
+    Write-Host " [ 1 ] Preparar Ambiente (Setup Steam/CS2)"
+    Write-Host " [ 2 ] Extrair Configurações (Save to Desktop)"
+    Write-Host " [ 3 ] Restaurar Configurações (Apply to Account)"
+    Write-Host " [ 0 ] Sair"
+    Write-Host "=========================================" -ForegroundColor Cyan
+    $Op = Read-Host "Opção"
+    switch ($Op) {
+        '1' { Invoke-Setup }
+        '2' { Invoke-Extract }
+        '3' { Invoke-Restore }
+    }
+} until ($Op -eq '0')
