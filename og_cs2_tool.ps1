@@ -139,28 +139,40 @@ function Invoke-Setup {
         return
     }
     
-    Write-Host "`nMonitorando criação das pastas (Staging/Final)..." -ForegroundColor Cyan
+    Write-Host "`nMonitorando criação das pastas..." -ForegroundColor Cyan
     $Concluido = $false
     while (-not $Concluido) {
         $CurrentSteamP = (Get-ItemPropertyValue $SteamReg SteamPath -ErrorAction SilentlyContinue)
-        if ($CurrentSteamP -and (Test-Path "$CurrentSteamP\steamapps\libraryfolders.vdf")) {
-            $Libs = Get-Content "$CurrentSteamP\steamapps\libraryfolders.vdf" | Where-Object {$_ -like '*:\*'} | ForEach-Object { (Resolve-Path ($_ -split '"',5)[3]).Path }
-            foreach ($L in $Libs) { 
-                $PathCommon = "$L\steamapps\common\$INSTALLDIR\game\$MOD\cfg"
-                $PathDown   = "$L\steamapps\downloading\$APPID\game\$MOD\cfg"
-
-                # DEBUG para vermos o robô trabalhando:
-                # Write-Host "`n[ DEBUG ] Check: $PathDown" -ForegroundColor Gray
-
-                if (Test-Path $PathCommon -or Test-Path $PathDown) { 
-                    $Concluido = $true; 
-                    break 
-                } 
+        $Libs = @($CurrentSteamP) # Começa com a pasta padrão
+        
+        # Busca bibliotecas extras de forma robusta
+        $VdfPath = Join-Path $CurrentSteamP "steamapps\libraryfolders.vdf"
+        if (Test-Path $VdfPath) {
+            $VdfContent = Get-Content $VdfPath
+            foreach ($line in $VdfContent) {
+                if ($line -match '"path"\s+"([^"]+)"') {
+                    $CleanPath = $matches[1] -replace '\\\\', '\'
+                    if ($CleanPath -ne $CurrentSteamP) { $Libs += $CleanPath }
+                }
             }
         }
+
+        foreach ($L in $Libs) { 
+            $PathCommon = Join-Path $L "steamapps\common\$INSTALLDIR\game\$MOD\cfg"
+            $PathDown   = Join-Path $L "steamapps\downloading\$APPID\game\$MOD\cfg"
+
+            # DEBUG: Remova o '#' abaixo se quiser ver exatamente onde ele procura
+            # Write-Host "`n[ DEBUG ] Tentando: $PathDown" -ForegroundColor Gray
+
+            if (Test-Path $PathCommon -or Test-Path $PathDown) { 
+                $Concluido = $true; 
+                break 
+            } 
+        }
+        
         if (-not $Concluido) { Write-Host "." -NoNewline; Start-Sleep -Seconds 3 }
     }
-    Write-Host "`n[ OK ] Estrutura detectada! Você já pode tentar o restore do seu autoexec.cfg.." -ForegroundColor Green
+    Write-Host "`n[ OK ] Estrutura detectada!" -ForegroundColor Green
     Start-Sleep -Seconds 3
 }
 
@@ -213,30 +225,41 @@ function Invoke-Restore {
     $Conta = Select-Conta
     if (-not $Conta) { return }
 
-    # Tenta descobrir o melhor destino (Common ou Downloading)
-    $SteamPath = (Get-ItemPropertyValue "HKCU:\SOFTWARE\Valve\Steam" SteamPath)
-    $Destino = "$($Conta.Path)\$APPID\local\cfg" # Destino da Conta (Sempre existe se logou)
+    $SteamReg = "HKCU:\SOFTWARE\Valve\Steam"
+    $SteamPath = (Get-ItemPropertyValue $SteamReg SteamPath)
+    $DestinoConta = "$($Conta.Path)\$APPID\local\cfg"
     
-    # Destino Global do Jogo
+    # Lista de bibliotecas para o Restore
+    $Libs = @($SteamPath)
+    $VdfPath = Join-Path $SteamPath "steamapps\libraryfolders.vdf"
+    if (Test-Path $VdfPath) {
+        $VdfContent = Get-Content $VdfPath
+        foreach ($line in $VdfContent) {
+            if ($line -match '"path"\s+"([^"]+)"') {
+                $CleanPath = $matches[1] -replace '\\\\', '\'
+                if ($CleanPath -ne $SteamPath) { $Libs += $CleanPath }
+            }
+        }
+    }
+    
     $GlobalCfg = $null
-    $Libs = Get-Content "$SteamPath\steamapps\libraryfolders.vdf" -ErrorAction SilentlyContinue | Where-Object {$_ -like '*:\*'} | ForEach-Object { (Resolve-Path ($_ -split '"',5)[3]).Path }
-    
     foreach ($L in $Libs) {
-        $PathCommon = "$L\steamapps\common\$INSTALLDIR\game\$MOD\cfg"
-        $PathDown   = "$L\steamapps\downloading\$APPID\game\$MOD\cfg"
+        $PathCommon = Join-Path $L "steamapps\common\$INSTALLDIR\game\$MOD\cfg"
+        $PathDown   = Join-Path $L "steamapps\downloading\$APPID\game\$MOD\cfg"
         
         if (Test-Path $PathCommon) { $GlobalCfg = $PathCommon; break }
         if (Test-Path $PathDown)   { $GlobalCfg = $PathDown; break }
     }
 
-    # Aplica na pasta da conta (Safe)
-    if (-not (Test-Path $Destino)) { New-Item -ItemType Directory -Force -Path $Destino | Out-Null }
-    Copy-Item -Path $Autoexec -Destination "$Destino\autoexec.cfg" -Force
+    # 1. Aplica na pasta da conta (Safe)
+    if (-not (Test-Path $DestinoConta)) { New-Item -ItemType Directory -Force -Path $DestinoConta | Out-Null }
+    Copy-Item -Path $Autoexec -Destination "$DestinoConta\autoexec.cfg" -Force
     
-    # Aplica na pasta do jogo (Testing)
+    # 2. Aplica na pasta do jogo (Ninja Mode)
     if ($GlobalCfg) {
+        if (-not (Test-Path $GlobalCfg)) { New-Item -ItemType Directory -Force -Path $GlobalCfg | Out-Null }
         Copy-Item -Path $Autoexec -Destination "$GlobalCfg\autoexec.cfg" -Force
-        Write-Host "`n[ OK ] Aplicado na pasta do jogo: $GlobalCfg" -ForegroundColor Gray
+        Write-Host "`n[ OK ] Aplicado em: $GlobalCfg" -ForegroundColor Gray
     }
 
     Write-Host "`n[ OK ] Configurações aplicadas para $($Conta.Nick)!" -ForegroundColor Green
