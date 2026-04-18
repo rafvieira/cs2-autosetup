@@ -1,5 +1,11 @@
 # Changelog - CS2 ACT (Autoconfig Tool)
 
+## [1.2.7] - 2026-04-18
+- Merge branch 'main' of https://github.com/rafvieira/cs2-autosetup
+- feat: suporte a nicknames com caracteres especiais e menu de restore amigável v1.2.7
+- chore: v1.2.6.1 liberada pelo Bot Zed [skip ci]
+
+
 ## [1.2.6.1] - 2026-04-18
 - hotfix: correção de encoding no transporte de dados v1.2.6.1
 - chore: v1.2.6 liberada pelo Bot Zed [skip ci]
