@@ -133,8 +133,8 @@ function Invoke-Setup {
     try {
         Write-Host "`n[ !!! ] Disparando comando de instalação..." -ForegroundColor Yellow
         Start-Process "steam://install/730" -ErrorAction Stop
-        Write-Host "`n[ OK ] Instalação iniciada com sucesso!" -ForegroundColor Green
-        Write-Host "[ INFO ] O Bot Zed preparou o terreno. Você já pode usar a Opção 2 (Restore) a qualquer momento." -ForegroundColor Cyan
+        Write-Host "`n[ OK ] Instalação iniciada! O Bot Zed já preparou o terreno." -ForegroundColor Green
+        Write-Host "[ INFO ] Você já pode usar a Opção 2 para restaurar as configs." -ForegroundColor Cyan
         Start-Sleep -Seconds 5
     } catch {
         Write-Host "`n[ ERRO ] Falha no protocolo. Retornando..." -ForegroundColor Red
@@ -150,7 +150,7 @@ function Invoke-Extract {
     $autoexec = "$([Environment]::GetFolderPath('Desktop'))\autoexec.cfg"
     $GamePath = $null
     
-    # Busca bibliotecas de forma robusta
+    # Busca bibliotecas via Regex
     $Libs = @($SteamPath)
     $VdfPath = Join-Path $SteamPath "steamapps\libraryfolders.vdf"
     if (Test-Path $VdfPath) {
@@ -192,8 +192,13 @@ function Invoke-Extract {
     Read-VCFG "$tempDir\$KEYS_VCFG" "BINDS" "bind"
     Read-VCFG "$tempDir\$USER_VCFG" "USER CONVARS"
     Read-VCFG "$tempDir\$MACH_VCFG" "MACHINE SETTINGS"
+    
+    # --- GARANTIA DE PERSISTÊNCIA ---
+    [void]$sb.AppendLine("`n// Comando de finalização")
+    [void]$sb.AppendLine("host_writeconfig")
+
     $sb.ToString() | Set-Content $autoexec -Force
-    Write-Host "`n[ OK ] Autoexec gerado no Desktop!" -ForegroundColor Green
+    Write-Host "`n[ OK ] Autoexec gerado no Desktop com host_writeconfig!" -ForegroundColor Green
     Start-Sleep -Seconds 2
 }
 
@@ -205,10 +210,10 @@ function Invoke-Restore {
         return 
     }
 
-    # 1. Identificar Alvo (Prioridade: Usuário Logado)
+    # 1. Identificar Usuário Logado (O ID de números)
     $ActiveReg = "HKCU:\Software\Valve\Steam\ActiveProcess"
     $SteamID = (Get-ItemPropertyValue $ActiveReg ActiveUser -ErrorAction SilentlyContinue)
-    
+
     if (-not $SteamID -or $SteamID -eq 0) {
         Write-Host "`n[ ! ] Steam aberta, mas login não detectado." -ForegroundColor Yellow
         $Conta = Select-Conta
@@ -224,10 +229,9 @@ function Invoke-Restore {
     Write-Host "`n[ ATAQUE RÁPIDO ] Injetando no perfil do usuário $SteamID..." -ForegroundColor Cyan
     if (-not (Test-Path $DestinoUserdata)) { New-Item -ItemType Directory -Force -Path $DestinoUserdata | Out-Null }
     Copy-Item -Path $Autoexec -Destination "$DestinoUserdata\autoexec.cfg" -Force
-    Write-Host "[ OK ] Configuração injetada com sucesso no perfil!" -ForegroundColor Green
+    Write-Host "[ OK ] Configuração plantada no perfil!" -ForegroundColor Green
 
-    # --- ATAQUE NINJA: Staging/Global ---
-    $GlobalCfg = $null
+    # --- ATAQUE NINJA: Staging/Global (Fallback) ---
     $Libs = @($SteamPath)
     $VdfPath = Join-Path $SteamPath "steamapps\libraryfolders.vdf"
     if (Test-Path $VdfPath) {
@@ -244,19 +248,19 @@ function Invoke-Restore {
         $PathCommon = Join-Path $L "steamapps\common\$INSTALLDIR\game\$MOD\cfg"
         $PathDown   = Join-Path $L "steamapps\downloading\$APPID\game\$MOD\cfg"
         
-        if (Test-Path $PathCommon) { $GlobalCfg = $PathCommon; break }
-        if (Test-Path $PathDown)   { $GlobalCfg = $PathDown; break }
+        $DestinoFinal = if (Test-Path $PathCommon) { $PathCommon } elseif (Test-Path $PathDown) { $PathDown } else { $null }
+
+        if ($DestinoFinal) {
+            Write-Host "[ NINJA ] Injetando na pasta do sistema ($DestinoFinal)..." -ForegroundColor Cyan
+            if (-not (Test-Path $DestinoFinal)) { New-Item -ItemType Directory -Force -Path $DestinoFinal | Out-Null }
+            Copy-Item -Path $Autoexec -Destination "$DestinoFinal\autoexec.cfg" -Force
+            Write-Host "[ OK ] Configuração injetada na pasta do jogo." -ForegroundColor Green
+            break
+        }
     }
 
-    if ($GlobalCfg) {
-        Write-Host "[ NINJA ] Injetando na pasta do jogo ($GlobalCfg)..." -ForegroundColor Cyan
-        if (-not (Test-Path $GlobalCfg)) { New-Item -ItemType Directory -Force -Path $GlobalCfg | Out-Null }
-        Copy-Item -Path $Autoexec -Destination "$GlobalCfg\autoexec.cfg" -Force
-        Write-Host "[ OK ] Configuração injetada na pasta do sistema." -ForegroundColor Green
-    }
-
-    Write-Host "`n[ FINALIZADO ] O ambiente está pronto para jogar!" -ForegroundColor Yellow
-    Start-Sleep -Seconds 3
+    Write-Host "`n[ SUCESSO ] O ambiente OnlyGoes está pronto!" -ForegroundColor Yellow
+    Start-Sleep -Seconds 6
 }
 
 # --- INÍCIO DA EXECUÇÃO ---
