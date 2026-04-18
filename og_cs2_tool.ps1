@@ -3,7 +3,7 @@
 # ============================================================
 # Fix characters
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$VERSION = "1.1.6" # [AUTO-UPDATE-VERSION]
+$VERSION = "1.1.7" # [AUTO-UPDATE-VERSION]
 
 # --- CONFIGURAÇÕES ESTÁTICAS ---
 $APPID      = 730
