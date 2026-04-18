@@ -10,52 +10,62 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # IMPORTANTE: Baixa o histórico para o robô ler os commits
+          fetch-depth: 0
+          ref: main # Força o robô a estar na branch main, evitando Detached HEAD
 
       - name: Get Version and Commits
         id: vars
         run: |
-          # Extrai a versão da Tag
+          # Extrair versão
           TAG=${GITHUB_REF#refs/tags/}
           VERSION=${TAG#v}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           
-          # Tenta encontrar a tag anterior para comparar
+          # Pegar commits desde a última tag
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          
-          # Se houver tag anterior, pega os commits entre elas. Se não, pega todos.
           if [ -z "$PREV_TAG" ]; then
             COMMITS=$(git log --pretty=format:"- %s")
           else
             COMMITS=$(git log $PREV_TAG..HEAD --pretty=format:"- %s")
           fi
           
-          # Limpa caracteres que podem quebrar o script e salva os commits
-          echo "commits<<EOF" >> $GITHUB_OUTPUT
-          echo "$COMMITS" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          # Salvar commits (Multine variable)
+          {
+            echo "commits<<EOF"
+            echo "$COMMITS"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
 
-      - name: Update og_cs2_tool.ps1
+      - name: Update Script Version
         run: |
+          # Atualiza a variável no PowerShell
           sed -i "s/\$VERSION = \".*\" # \[AUTO-UPDATE-VERSION\]/\$VERSION = \"${{ steps.vars.outputs.version }}\" # \[AUTO-UPDATE-VERSION\]/g" og_cs2_tool.ps1
 
       - name: Update CHANGELOG.md
         run: |
           DATE=$(date +'%Y-%m-%d')
-          # Cria a entrada formatada com a versão, data e os commits reais
-          echo -e "## [${{ steps.vars.outputs.version }}] - $DATE\n${{ steps.vars.outputs.commits }}\n\n$(cat CHANGELOG.md)" > CHANGELOG.md
-          # Remove duplicatas de cabeçalho (se o comando acima repetir o título)
-          sed -i '1{/^# Changelog/d}' CHANGELOG.md
-          # Garante que o título esteja no topo
-          sed -i '1i # Changelog - CS2 ACT (Autoconfig Tool)\n' CHANGELOG.md
+          # Cria um arquivo temporário com a nova entrada
+          echo -e "## [${{ steps.vars.outputs.version }}] - $DATE\n${{ steps.vars.outputs.commits }}\n" > new_entry.md
+          
+          # Se o Changelog já existe, anexa o resto. Se não, cria um cabeçalho.
+          if [ -f CHANGELOG.md ]; then
+            # Remove o título antigo temporariamente para não duplicar
+            sed -i '1{/^# Changelog/d}' CHANGELOG.md
+            cat new_entry.md CHANGELOG.md > temp_ch.md
+          else
+            cat new_entry.md > temp_ch.md
+          fi
+          
+          # Adiciona o título fixo no topo
+          echo -e "# Changelog - CS2 ACT (Autoconfig Tool)\n\n$(cat temp_ch.md)" > CHANGELOG.md
+          rm new_entry.md temp_ch.md
 
-      -- name: Commit and Push changes
+      - name: Commit and Push changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add og_cs2_tool.ps1 CHANGELOG.md
           git commit -m "chore: atualizando para v${{ steps.vars.outputs.version }} [skip ci]"
-          # Empurra o estado atual (HEAD) para a branch remota main
-          git push origin HEAD:main
+          git push origin main

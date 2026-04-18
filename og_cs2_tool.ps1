@@ -1,7 +1,6 @@
 # ============================================================
 # ONLYGOES INFORMÁTICA E TECNOLOGIA - CS2 ACT (Autoconfig Tool)
 # ============================================================
-# Fix characters (Garante UTF-8 para o banner Braille)
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $VERSION = "1.2.0" # [AUTO-UPDATE-VERSION]
 
@@ -18,7 +17,6 @@ $VIDEO_TXT  = "${APPNAME}_video.txt"
 # --- FUNÇÃO DE INTRODUÇÃO (SPLASH SCREEN) ---
 function Show-Intro {
     Clear-Host
-    # Arte re-alinhada
     $Art = @"
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣴⣶⣤⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣠⣸⣿⣿⡟⣀⣀⣀⣀⣀⣀⣀⠀⠀⠀⠀
@@ -35,13 +33,12 @@ function Show-Intro {
 ⠀⠀⠀⠀⠀⠀⠀⠸⠿⠀⠀⠀⠀⠀⠀⠀⠛⠛⠛⠃
 "@
     Write-Host "`n$Art" -ForegroundColor Yellow
-    Write-Host "`n INICIALIZANDO CS2 AutoConfig Tool" -ForegroundColor Cyan
+    Write-Host "`n      INICIALIZANDO CS2 ACT v$VERSION..." -ForegroundColor Cyan
     Start-Sleep -Seconds 3
-    Clear-Host
 }
 
-# --- FUNÇÃO DE CABEÇALHO DO MENU ---
 function Show-MenuHeader {
+    Clear-Host
     Write-Host "=========================================" -ForegroundColor Cyan
     Write-Host "      ONLYGOES - CS2 ACT v$VERSION" -ForegroundColor Yellow
     Write-Host "=========================================" -ForegroundColor Cyan
@@ -70,7 +67,6 @@ function Get-ContasSteam {
     return $Contas
 }
 
-# --- FUNÇÃO SELECT-CONTA (Ajustada para timeout) ---
 function Select-Conta {
     $Contas = Get-ContasSteam
     if (-not $Contas -or $Contas.Count -eq 0) { 
@@ -81,10 +77,14 @@ function Select-Conta {
     Write-Host "`n=============================================" -ForegroundColor Cyan
     Write-Host " SELECIONE A CONTA" -ForegroundColor Yellow
     Write-Host "=============================================" -ForegroundColor Cyan
-    for ($i=0; $i -lt $Contas.Count; $i++) { Write-Host " [ $($i+1) ] - $($Contas[$i].Nick) ($($Contas[$i].ID))" }
+    for ($i=0; $i -lt $Contas.Count; $i++) { 
+        Write-Host " [ $($i+1) ] - $($Contas[$i].Nick) ($($Contas[$i].ID))" 
+    }
     
-    $sel = Read-Host "`nDigite o número"
-    if ($sel -match '^\d+$' -and $sel -gt 0 -and $sel -le $Contas.Count) { return $Contas[[int]$sel-1] }
+    $sel = Read-Host "`nDigite o número da conta"
+    if ($sel -match '^\d+$' -and $sel -gt 0 -and $sel -le $Contas.Count) { 
+        return $Contas[[int]$sel-1] 
+    }
     
     Write-Host "`n[ ERRO ] Opção inválida! Voltando ao menu..." -ForegroundColor Red
     Start-Sleep -Seconds 3
@@ -96,33 +96,32 @@ function Select-Conta {
 function Invoke-Setup {
     $IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
     if (-not $IsAdmin) { 
-        Write-Host "`n[ ERRO ] O CS2 ACT precisa de privilégios de Administrador para esta opção." -ForegroundColor Red
-        Read-Host "Pressione ENTER para voltar..."
+        Write-Host "`n[ ERRO ] Requer privilégios de Administrador." -ForegroundColor Red
+        Start-Sleep -Seconds 3
         return 
     }
     
-    $SteamReg = "HKCU:\SOFTWARE\Valve\Steam"
+    $SteamReg  = "HKCU:\SOFTWARE\Valve\Steam"
     $ActiveReg = "HKCU:\Software\Valve\Steam\ActiveProcess"
     $PathNoRegistro = (Get-ItemPropertyValue $SteamReg SteamPath -ErrorAction SilentlyContinue)
     $SteamExe = if ($PathNoRegistro) { Join-Path $PathNoRegistro "steam.exe" } else { $null }
 
-    # 1. Instalação Robusta
     if (-not (Test-Path $SteamReg) -or -not (Test-Path $SteamExe)) {
-        Write-Host "`n[ SETUP ] Steam não encontrada ou incompleta. Instalando..." -ForegroundColor Cyan
+        Write-Host "`n[ SETUP ] Steam não encontrada. Instalando..." -ForegroundColor Cyan
         winget install --id Valve.Steam -e --source winget --silent --accept-source-agreements --accept-package-agreements --force
         $PathNoRegistro = (Get-ItemPropertyValue $SteamReg SteamPath -ErrorAction SilentlyContinue)
         $SteamExe = Join-Path $PathNoRegistro "steam.exe"
     }
 
-    # 2. Aguardar Login Real (Sem travas)
     Write-Host "`n[ !!! ] Aguardando login na Steam..." -ForegroundColor Yellow
     if (-not (Get-Process "steam" -ErrorAction SilentlyContinue)) { Start-Process $SteamExe }
 
     Write-Host "Status: Sincronizando" -NoNewline
     while ($true) {
-        $RegPID = (Get-ItemPropertyValue "HKCU:\Software\Valve\Steam\ActiveProcess" pid -ErrorAction SilentlyContinue)
-        $ActiveUser = (Get-ItemPropertyValue "HKCU:\Software\Valve\Steam\ActiveProcess" ActiveUser -ErrorAction SilentlyContinue)
+        $RegPID     = (Get-ItemPropertyValue $ActiveReg pid -ErrorAction SilentlyContinue)
+        $ActiveUser = (Get-ItemPropertyValue $ActiveReg ActiveUser -ErrorAction SilentlyContinue)
         $ActualPIDs = (Get-Process "steam" -ErrorAction SilentlyContinue).Id
+
         if ($ActualPIDs -contains $RegPID -and $ActiveUser -and $ActiveUser -ne 0) { 
             Write-Host " [ CONECTADO ]" -ForegroundColor Green
             break 
@@ -131,7 +130,6 @@ function Invoke-Setup {
         Start-Sleep -Seconds 2
     }
 
-    # 3. Disparar instalação (Sem Read-Host!)
     try {
         Write-Host "`n[ !!! ] Disparando comando de instalação..." -ForegroundColor Yellow
         Start-Process "steam://install/730" -ErrorAction Stop
@@ -141,21 +139,19 @@ function Invoke-Setup {
         return
     }
     
-    # 4. Monitoramento Eager (Detectou a pasta? Já libera!)
     Write-Host "`nMonitorando criação das pastas do jogo..." -ForegroundColor Cyan
     $Concluido = $false
     while (-not $Concluido) {
-        $CurrentSteamP = (Get-ItemPropertyValue "HKCU:\SOFTWARE\Valve\Steam" SteamPath -ErrorAction SilentlyContinue)
+        $CurrentSteamP = (Get-ItemPropertyValue $SteamReg SteamPath -ErrorAction SilentlyContinue)
         if ($CurrentSteamP -and (Test-Path "$CurrentSteamP\steamapps\libraryfolders.vdf")) {
             $Libs = Get-Content "$CurrentSteamP\steamapps\libraryfolders.vdf" | Where-Object {$_ -like '*:\*'} | ForEach-Object { (Resolve-Path ($_ -split '"',5)[3]).Path }
             foreach ($L in $Libs) { 
-                # Se a pasta cfg existir, não importa se o jogo baixou tudo, já estamos prontos!
                 if (Test-Path "$L\steamapps\common\$INSTALLDIR\game\$MOD\cfg") { $Concluido = $true; break } 
             }
         }
         if (-not $Concluido) { Write-Host "." -NoNewline; Start-Sleep -Seconds 3 }
     }
-    Write-Host "`n[ OK ] Pasta de configurações detectada! Pronto para Restore." -ForegroundColor Green
+    Write-Host "`n[ OK ] Pasta detectada! Pronto para configurar." -ForegroundColor Green
     Start-Sleep -Seconds 3
 }
 
@@ -194,24 +190,29 @@ function Invoke-Extract {
     Read-VCFG "$tempDir\$USER_VCFG" "USER CONVARS"
     Read-VCFG "$tempDir\$MACH_VCFG" "MACHINE SETTINGS"
     $sb.ToString() | Set-Content $autoexec -Force
-    Write-Host "`n[OK] Autoexec gerado no Desktop!" -ForegroundColor Green; Start-Sleep -Seconds 3
+    Write-Host "`n[ OK ] Autoexec gerado no Desktop!" -ForegroundColor Green
+    Start-Sleep -Seconds 2
 }
 
 function Invoke-Restore {
     $Autoexec = "$([Environment]::GetFolderPath('Desktop'))\autoexec.cfg"
-    if (-not (Test-Path $Autoexec)) { Write-Host "`n[ERRO] autoexec.cfg não encontrado no Desktop!" -ForegroundColor Red; Start-Sleep -Seconds 3; return }
+    if (-not (Test-Path $Autoexec)) { 
+        Write-Host "`n[ ERRO ] autoexec.cfg não encontrado no Desktop!" -ForegroundColor Red
+        Start-Sleep -Seconds 3
+        return 
+    }
     $Conta = Select-Conta
     if (-not $Conta) { return }
     $Destino = "$($Conta.Path)\$APPID\local\cfg"
     if (-not (Test-Path $Destino)) { New-Item -ItemType Directory -Force -Path $Destino | Out-Null }
     Copy-Item -Path $Autoexec -Destination "$Destino\autoexec.cfg" -Force
-    Write-Host "`n[OK] Configurações aplicadas para $($Conta.Nick)!" -ForegroundColor Green; Start-Sleep -Seconds 3
+    Write-Host "`n[ OK ] Configurações aplicadas para $($Conta.Nick)!" -ForegroundColor Green
+    Start-Sleep -Seconds 2
 }
 
-# --- INÍCIO DO SCRIPT ---
+# --- INÍCIO DA EXECUÇÃO ---
 Show-Intro
 
-# --- MENU PRINCIPAL (Garantindo limpeza de tela) ---
 do {
     Show-MenuHeader
     Write-Host " [ 1 ] Extrair configurações (Desktop)"
@@ -219,12 +220,16 @@ do {
     Write-Host " [ 3 ] Preparar ambiente (Instalação)"
     Write-Host " [ 0 ] Sair"
     Write-Host "=========================================" -ForegroundColor Cyan
-    $Op = Read-Host "Opção"
-    
+    Write-Host "Escolha uma opção: " -NoNewline
+
+    $Key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    $Op = $Key.Character
+    Write-Host $Op
+
     switch ($Op) {
-        '1' { Invoke-Extract; Clear-Host }
-        '2' { Invoke-Restore; Clear-Host }
-        '3' { Invoke-Setup;   Clear-Host }
+        '1' { Invoke-Extract }
+        '2' { Invoke-Restore }
+        '3' { Invoke-Setup }
         '0' { 
             Clear-Host
             Write-Host "`nObrigado por usar as ferramentas OnlyGoes!" -ForegroundColor Cyan
@@ -232,9 +237,10 @@ do {
             Stop-Process -Id $PID 
         }
         default { 
-            Write-Host "`n[ ! ] Opção inválida. Tente novamente..." -ForegroundColor Red
-            Start-Sleep -Seconds 2
-            Clear-Host
+            if ($Op -ne "`r" -and $Op -ne "`n") { 
+                Write-Host "`n`n[ ! ] Opção '$Op' inválida." -ForegroundColor Red
+                Start-Sleep -Seconds 2
+            }
         }
     }
 } until ($Op -eq '0')
