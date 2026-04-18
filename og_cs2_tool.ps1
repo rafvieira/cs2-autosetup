@@ -2,7 +2,7 @@
 # ONLYGOES INFORMÁTICA E TECNOLOGIA - CS2 ACT (Autoconfig Tool)
 # ============================================================
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$VERSION = "1.2.5" # [AUTO-UPDATE-VERSION]
+$VERSION = "1.2.6" # [AUTO-UPDATE-VERSION]
 
 # --- CONFIGURAÇÕES ESTÁTICAS ---
 $APPID      = 730
@@ -82,18 +82,14 @@ function Select-Conta {
     }
     
     Write-Host "`nDigite o número da conta: " -NoNewline
-    # COMPORTAMENTO SEM ENTER: Captura a tecla instantaneamente
     $Key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     $sel = $Key.Character
-    Write-Host $sel # Exibe a tecla pressionada
+    Write-Host $sel
 
     if ($sel -match '^[1-9]$') {
         $idx = [int][string]$sel - 1
-        if ($idx -lt $Contas.Count) {
-            return $Contas[$idx]
-        }
+        if ($idx -lt $Contas.Count) { return $Contas[$idx] }
     }
-    
     Write-Host "`n[ ERRO ] Opção inválida! Voltando ao menu..." -ForegroundColor Red
     Start-Sleep -Seconds 3
     return $null
@@ -155,9 +151,10 @@ function Invoke-Extract {
     if (-not $Conta) { return }
     $SteamPath = (Get-ItemPropertyValue "HKCU:\SOFTWARE\Valve\Steam" SteamPath)
     $USRLOCAL = "$($Conta.Path)\$APPID\local"
-    $autoexec = "$([Environment]::GetFolderPath('Desktop'))\autoexec.cfg"
-    $GamePath = $null
+    $DesktopPath = [Environment]::GetFolderPath('Desktop')
+    $OutputFile = Join-Path $DesktopPath "BKP_CFG_$($Conta.Nick).og"
     
+    $GamePath = $null
     $Libs = @($SteamPath)
     $VdfPath = Join-Path $SteamPath "steamapps\libraryfolders.vdf"
     if (Test-Path $VdfPath) {
@@ -169,7 +166,6 @@ function Invoke-Extract {
             }
         }
     }
-
     foreach ($L in $Libs) { 
         $CheckPath = Join-Path $L "steamapps\common\$INSTALLDIR\game\$MOD"
         if (Test-Path $CheckPath) { $GamePath = $CheckPath; break } 
@@ -181,6 +177,7 @@ function Invoke-Extract {
     if (Test-Path "$USRLOCAL\cfg") { robocopy "$USRLOCAL\cfg/" "$tempDir/" $USER_VCFG $KEYS_VCFG $MACH_VCFG $VIDEO_TXT /XO | Out-Null }
 
     $sb = New-Object System.Text.StringBuilder
+    [void]$sb.AppendLine("// OG_BACKUP_VERSION: $VERSION")
     [void]$sb.AppendLine("// OnlyGoes Autoexec - Conta: $($Conta.Nick)")
     
     function Read-VCFG($file, $header, $prefix = "") {
@@ -199,75 +196,83 @@ function Invoke-Extract {
     Read-VCFG "$tempDir\$KEYS_VCFG" "BINDS" "bind"
     Read-VCFG "$tempDir\$USER_VCFG" "USER CONVARS"
     Read-VCFG "$tempDir\$MACH_VCFG" "MACHINE SETTINGS"
-    
-    [void]$sb.AppendLine("`n// Comando de finalização")
-    [void]$sb.AppendLine("host_writeconfig")
+    [void]$sb.AppendLine("`nhost_writeconfig")
+    [void]$sb.AppendLine("---ONLYGOES-AUTOEXEC-END---")
 
-    $sb.ToString() | Set-Content $autoexec -Force
-    # TEXTO AJUSTADO v1.2.5
+    # EMPACOTAMENTO DE VÍDEO (Encoding Preserved)
+    [void]$sb.AppendLine("---ONLYGOES-VIDEO-START---")
+    $VideoFile = "$tempDir\$VIDEO_TXT"
+    if (Test-Path $VideoFile) {
+        $VideoContent = Get-Content -Path $VideoFile -Raw -Encoding UTF8
+        [void]$sb.Append($VideoContent)
+    }
+    [void]$sb.AppendLine("`n---ONLYGOES-VIDEO-END---")
+
+    $sb.ToString() | Set-Content -Path $OutputFile -Encoding UTF8
     Write-Host "`nautoexec.cfg gerado com sucesso, salvo na área de trabalho." -ForegroundColor Green
     Start-Sleep -Seconds 4
 }
 
 function Invoke-Restore {
-    $Autoexec = "$([Environment]::GetFolderPath('Desktop'))\autoexec.cfg"
-    if (-not (Test-Path $Autoexec)) { 
-        # TEXTO AJUSTADO v1.2.5
-        Write-Host "`n[ ERRO ] autoexec.cfg não encontrado na área de trabalho!" -ForegroundColor Red
+    $DesktopPath = [Environment]::GetFolderPath('Desktop')
+    $Backups = Get-ChildItem -Path $DesktopPath -Filter "*.og"
+    
+    if (-not $Backups) {
+        Write-Host "`n[ ERRO ] Nenhum arquivo .og encontrado na área de trabalho!" -ForegroundColor Red
         Start-Sleep -Seconds 3
         return 
     }
 
+    $SelectedBkp = $null
+    if ($Backups.Count -eq 1) {
+        $SelectedBkp = $Backups[0]
+    } else {
+        Write-Host "`n=============================================" -ForegroundColor Cyan
+        Write-Host " SELECIONE O BACKUP (.og)" -ForegroundColor Yellow
+        Write-Host "=============================================" -ForegroundColor Cyan
+        for ($i=0; $i -lt $Backups.Count; $i++) { Write-Host " [ $($i+1) ] - $($Backups[$i].Name)" }
+        Write-Host "`nEscolha o backup: " -NoNewline
+        $Key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        $selB = $Key.Character
+        Write-Host $selB
+        if ($selB -match '^[1-9]$') {
+            $idxB = [int][string]$selB - 1
+            if ($idxB -lt $Backups.Count) { $SelectedBkp = $Backups[$idxB] }
+        }
+    }
+
+    if (-not $SelectedBkp) { return }
+
+    # Identificar Destinatário
     $ActiveReg = "HKCU:\Software\Valve\Steam\ActiveProcess"
     $SteamID = (Get-ItemPropertyValue $ActiveReg ActiveUser -ErrorAction SilentlyContinue)
-
     if (-not $SteamID -or $SteamID -eq 0) {
-        Write-Host "`n[ ! ] Steam aberta, mas login não detectado." -ForegroundColor Yellow
         $Conta = Select-Conta
-        if (-not $Conta) { return }
-        $SteamID = $Conta.ID
+        if (-not $Conta) { return }; $SteamID = $Conta.ID
     }
 
     $SteamReg = "HKCU:\SOFTWARE\Valve\Steam"
     $SteamPath = (Get-ItemPropertyValue $SteamReg SteamPath)
-    
-    # --- ATAQUE RÁPIDO ---
-    $DestinoUserdata = Join-Path $SteamPath "userdata\$SteamID\$APPID\local\cfg"
-    # TEXTO AJUSTADO v1.2.5
+    $Destino = Join-Path $SteamPath "userdata\$SteamID\$APPID\local\cfg"
+    if (-not (Test-Path $Destino)) { New-Item -ItemType Directory -Force -Path $Destino | Out-Null }
+
+    # DESEMPACOTAMENTO (Unpacker Logic)
     Write-Host "`n[ ATAQUE RÁPIDO ] Plantando configs no perfil do usuário $SteamID..." -ForegroundColor Cyan
-    if (-not (Test-Path $DestinoUserdata)) { New-Item -ItemType Directory -Force -Path $DestinoUserdata | Out-Null }
-    Copy-Item -Path $Autoexec -Destination "$DestinoUserdata\autoexec.cfg" -Force
-    Write-Host "[ OK ] Configuração plantada no perfil!" -ForegroundColor Green
-
-    # --- ATAQUE NINJA ---
-    $Libs = @($SteamPath)
-    $VdfPath = Join-Path $SteamPath "steamapps\libraryfolders.vdf"
-    if (Test-Path $VdfPath) {
-        $VdfContent = Get-Content $VdfPath
-        foreach ($line in $VdfContent) {
-            if ($line -match '"path"\s+"([^"]+)"') {
-                $CleanPath = $matches[1] -replace '\\\\', '\'
-                if ($CleanPath -ne $SteamPath) { $Libs += $CleanPath }
-            }
-        }
-    }
+    $RawData = Get-Content -Path $SelectedBkp.FullName -Raw -Encoding UTF8
     
-    foreach ($L in $Libs) {
-        $PathCommon = Join-Path $L "steamapps\common\$INSTALLDIR\game\$MOD\cfg"
-        $PathDown   = Join-Path $L "steamapps\downloading\$APPID\game\$MOD\cfg"
-        
-        $DestinoFinal = if (Test-Path $PathCommon) { $PathCommon } elseif (Test-Path $PathDown) { $PathDown } else { $null }
-
-        if ($DestinoFinal) {
-            Write-Host "[ NINJA ] Injetando na pasta do sistema ($DestinoFinal)..." -ForegroundColor Cyan
-            if (-not (Test-Path $DestinoFinal)) { New-Item -ItemType Directory -Force -Path $DestinoFinal | Out-Null }
-            Copy-Item -Path $Autoexec -Destination "$DestinoFinal\autoexec.cfg" -Force
-            Write-Host "[ OK ] Configuração injetada na pasta do jogo." -ForegroundColor Green
-            break
-        }
+    # Extrair Autoexec
+    $AutoContent = ($RawData -split "---ONLYGOES-AUTOEXEC-END---")[0]
+    $AutoContent | Set-Content -Path (Join-Path $Destino "autoexec.cfg") -Encoding UTF8
+    
+    # Extrair Vídeo
+    $VideoPart = ($RawData -split "---ONLYGOES-VIDEO-START---")[1]
+    if ($VideoPart) {
+        $VideoContent = ($VideoPart -split "---ONLYGOES-VIDEO-END---")[0].Trim()
+        $VideoContent | Set-Content -Path (Join-Path $Destino $VIDEO_TXT) -Encoding UTF8
+        Write-Host "[ OK ] Configurações de vídeo restauradas!" -ForegroundColor Green
     }
 
-    # TEXTO AJUSTADO v1.2.5
+    Write-Host "[ OK ] Configuração plantada no perfil!" -ForegroundColor Green
     Write-Host "`n[ SUCESSO ] “Configs aplicadas. Go, go, go!”" -ForegroundColor Green
     Start-Sleep -Seconds 5
 }
@@ -294,7 +299,6 @@ do {
         '3' { Invoke-Setup }
         '0' { 
             Clear-Host
-            # TEXTO AJUSTADO v1.2.5 (Easy Peasy Lemon Squeezy 🍋)
             Write-Host "`nEasy Peasy Lemon Squeezy 🍋" -ForegroundColor Green
             Start-Sleep -Seconds 2
             Stop-Process -Id $PID 
