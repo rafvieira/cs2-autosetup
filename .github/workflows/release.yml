@@ -8,22 +8,24 @@ on:
 jobs:
   update-files:
     runs-on: ubuntu-latest
+    # --- PERMISSÃO DE ESCRITA PARA O BOT ZED ---
+    permissions:
+      contents: write
+    # ------------------------------------------
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: main # Garante que o robô trabalhe na branch main para evitar Detached HEAD
+          ref: main
 
       - name: Get Version and Commits
         id: vars
         run: |
-          # Extrair versão
           TAG=${GITHUB_REF#refs/tags/}
           VERSION=${TAG#v}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           
-          # Pegar commits desde a última tag (mínimo de 1 commit)
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
           if [ -z "$PREV_TAG" ]; then
             COMMITS=$(git log --pretty=format:"- %s")
@@ -31,7 +33,6 @@ jobs:
             COMMITS=$(git log $PREV_TAG..HEAD --pretty=format:"- %s")
           fi
           
-          # Salvar commits de forma segura para o GitHub
           {
             echo "commits<<EOF"
             echo "$COMMITS"
@@ -40,16 +41,13 @@ jobs:
 
       - name: Update Script Version
         run: |
-          # Atualiza a variável $VERSION no arquivo .ps1
           sed -i "s/\$VERSION = \".*\" # \[AUTO-UPDATE-VERSION\]/\$VERSION = \"${{ steps.vars.outputs.version }}\" # \[AUTO-UPDATE-VERSION\]/g" og_cs2_tool.ps1
 
       - name: Update CHANGELOG.md
         run: |
           DATE=$(date +'%Y-%m-%d')
-          # Cria nova entrada
           echo -e "## [${{ steps.vars.outputs.version }}] - $DATE\n${{ steps.vars.outputs.commits }}\n" > new_entry.md
           
-          # Se o arquivo já existir, remove o título temporariamente para reconstruir
           if [ -f CHANGELOG.md ]; then
             sed -i '1{/^# Changelog/d}' CHANGELOG.md
             cat new_entry.md CHANGELOG.md > temp_ch.md
@@ -57,15 +55,14 @@ jobs:
             cat new_entry.md > temp_ch.md
           fi
           
-          # Reconstrói o arquivo com o título oficial no topo
           echo -e "# Changelog - CS2 ACT (Autoconfig Tool)\n\n$(cat temp_ch.md)" > CHANGELOG.md
           rm new_entry.md temp_ch.md
 
       - name: Commit and Push changes
         run: |
+          # AGORA ELE SE IDENTIFICA COMO BOT ZED
           git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          git config --local user.name "Bot Zed"
           git add og_cs2_tool.ps1 CHANGELOG.md
-          # [skip ci] evita loop infinito
-          git commit -m "chore: atualizando para v${{ steps.vars.outputs.version }} [skip ci]"
+          git commit -m "chore: v${{ steps.vars.outputs.version }} liberada pelo Bot Zed [skip ci]"
           git push origin main
