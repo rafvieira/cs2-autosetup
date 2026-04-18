@@ -1,5 +1,11 @@
 # Changelog - CS2 ACT (Autoconfig Tool)
 
+## [1.2.2] - 2026-04-18
+- fix: monitoramento e restauro hibrido  (common/downloading)
+- Merge branch 'main' of https://github.com/rafvieira/cs2-autosetup
+- chore: v1.2.1 liberada pelo Bot Zed [skip ci]
+
+
 ## [1.2.1] - 2026-04-18
 - chore: v1.2.0 liberada pelo Bot Zed [skip ci]
 
