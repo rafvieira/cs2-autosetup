@@ -15,25 +15,39 @@ $KEYS_VCFG  = "${APPNAME}_user_keys_0_slot0.vcfg"
 $MACH_VCFG  = "${APPNAME}_machine_convars.vcfg"
 $VIDEO_TXT  = "${APPNAME}_video.txt"
 
-# --- FUNÇÃO DE BANNER ---
-function Show-Banner {
+# ============================================================
+# ONLYGOES INFORMÁTICA E TECNOLOGIA - CS2 ACT (Autoconfig Tool)
+# ============================================================
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$VERSION = "1.1.7" # [AUTO-UPDATE-VERSION]
+
+# --- FUNÇÃO DE INTRODUÇÃO (SPLASH SCREEN) ---
+function Show-Intro {
     Clear-Host
+    # Arte re-alinhada para simetria
     $Art = @"
-           ⢠⣴⣶⣤
-     ⣀⣠⣸⣿⣿⡟⣀⣀⣀⣀⣀⣀⣀
-     ⢀⣿⣿⣿⣿⣿⣿⣿⡿⣿⡿⠛⠛⠋
-     ⢀⣸⣿⣿⣿⣿⣿⣿⣿⣷⣿⠃
-⢠⣶⣶⣶⣶⣶⣶⡄⠀⢸⣿⣿⣿⣿⣿⣿⣧⠙⠛⠉⢠⣶⣶⣶⣶⣶⣶⡄
-⢸⣿⣿⠛⠛⠛⠛⠃⠀⠐⣿⣿⣿⣿⣿⣿⡟⠀⠀⠀⢸⣿⡿⠛⠛⠛⠛⠃
-⢸⣿⣿⠀⠀⠀⠀⠀⠀⢠⣿⣿⣿⣿⣿⣧⡀⠀⠀⠀⢸⣿⣿⣶⣶⣶⣶⡆
-⢸⣿⣿⠀⠀⠀⠀⠀⠀⢸⣿⣿⡿⢿⣿⣿⣿⡀⠀⠀⠈⠛⠛⠛⠛⣿⣿⡇
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣴⣶⣤⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣠⣸⣿⣿⡟⣀⣀⣀⣀⣀⣀⣀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣿⣿⣿⣿⣿⣿⡿⣿⡿⠛⠛⠋⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣸⣿⣿⣿⣿⣿⣿⣿⣷⣿⠃⠀⠀⠀⠀⠀⠀⠀
+⢠⣶⣶⣶⣶⣶⣶⡄⠀⢸⣿⣿⣿⣿⣿⣿⣧⠙⠛⠉ ⢠⣶⣶⣶⣶⣶⣶⡄
+⢸⣿⣿⠛⠛⠛⠛⠃⠀⠐⣿⣿⣿⣿⣿⣿⡟⠀⠀  ⢸⣿⡿⠛⠛⠛⠛⠃
+⢸⣿⣿⠀⠀⠀⠀⠀⠀⢠⣿⣿⣿⣿⣿⣧⡀⠀⠀⠀ ⢸⣿⣿⣶⣶⣶⣶⡆
+⢸⣿⣿⠀⠀⠀⠀⠀⠀⢸⣿⣿⡿⢿⣿⣿⣿⡀⠀⠀ ⠈⠛⠛⠛⠛⣿⣿⡇
 ⢸⣿⣿⣿⣿⣿⣿⡇⠀⢸⣿⣿⠁⠀⠘⢿⣿⣷⠀⠀⢸⣿⣿⣿⣿⣿⣿⡇
 ⠈⠉⠉⠉⠉⠉⠉⠁⢠⣿⡟⠁⠀⠀⠀⢠⣿⣿⠀⠀⠈⠉⠉⠉⠉⠉⠉⠁
-           ⢠⣿⣿⠃⠀⠀⠀⠀⠀⣿⣿
-           ⢸⣿⠉⠀⠀⠀⠀⠀⠀⣹⣿⡀
-           ⠸⠿⠀⠀⠀⠀⠀⠀⠀⠛⠛⠛⠃
+⠀⠀⠀⠀⠀⠀⠀⢠⣿⣿⠃⠀⠀⠀⠀⠀⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⢸⣿⠉⠀⠀⠀⠀⠀⠀⣹⣿⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠸⠿⠀⠀⠀⠀⠀⠀⠀⠛⠛⠛⠃
 "@
-    Write-Host $Art -ForegroundColor Yellow
+    Write-Host "`n$Art" -ForegroundColor Yellow
+    Write-Host "`n      INICIALIZANDO CS2 ACT v$VERSION..." -ForegroundColor Cyan
+    Start-Sleep -Seconds 3
+    Clear-Host
+}
+
+# --- FUNÇÃO DE CABEÇALHO DO MENU ---
+function Show-MenuHeader {
     Write-Host "=========================================" -ForegroundColor Cyan
     Write-Host "      ONLYGOES - CS2 ACT v$VERSION" -ForegroundColor Yellow
     Write-Host "=========================================" -ForegroundColor Cyan
@@ -200,29 +214,33 @@ function Invoke-Restore {
     Write-Host "`n[OK] Configurações aplicadas para $($Conta.Nick)!" -ForegroundColor Green; Start-Sleep -Seconds 3
 }
 
+# --- INÍCIO DO SCRIPT ---
+Show-Intro
+
 # --- MENU PRINCIPAL ---
 do {
-    Show-Banner
+    Show-MenuHeader
     Write-Host " [ 1 ] Extrair configurações (Desktop)"
     Write-Host " [ 2 ] Restaurar configurações (Steam)"
     Write-Host " [ 3 ] Preparar ambiente (Instalação)"
     Write-Host " [ 0 ] Sair"
     Write-Host "=========================================" -ForegroundColor Cyan
     $Op = Read-Host "Opção"
+    
     switch ($Op) {
-        '1' { Invoke-Extract }
-        '2' { Invoke-Restore }
-        '3' { Invoke-Setup }
+        '1' { Invoke-Extract; Clear-Host }
+        '2' { Invoke-Restore; Clear-Host }
+        '3' { Invoke-Setup;   Clear-Host }
         '0' { 
             Clear-Host
             Write-Host "`nObrigado por usar as ferramentas OnlyGoes!" -ForegroundColor Cyan
             Start-Sleep -Seconds 1
-            # Fecha o terminal/powershell completamente
             Stop-Process -Id $PID 
         }
         default { 
             Write-Host "`n[ ! ] Opção inválida. Tente novamente..." -ForegroundColor Red
             Start-Sleep -Seconds 2
+            Clear-Host
         }
     }
 } until ($Op -eq '0')
