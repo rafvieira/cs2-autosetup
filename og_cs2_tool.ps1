@@ -66,28 +66,35 @@ function Invoke-Setup {
     }
     
     $SteamReg = "HKCU:\SOFTWARE\Valve\Steam"
+    $ActiveReg = "HKCU:\Software\Valve\Steam\ActiveProcess"
     $PathNoRegistro = (Get-ItemPropertyValue $SteamReg SteamPath -ErrorAction SilentlyContinue)
     $SteamExe = if ($PathNoRegistro) { Join-Path $PathNoRegistro "steam.exe" } else { $null }
 
-    # 1. Instalação (se necessário)
+    # 1. Instalação Robusta
     if (-not (Test-Path $SteamReg) -or -not (Test-Path $SteamExe)) {
-        Write-Host "`n[ SETUP ] Steam não encontrada. Instalando via Winget..." -ForegroundColor Cyan
+        Write-Host "`n[ SETUP ] Steam não encontrada ou incompleta. Instalando..." -ForegroundColor Cyan
         winget install --id Valve.Steam -e --source winget --silent --accept-source-agreements --accept-package-agreements --force
-        # Pega o caminho após a instalação
         $PathNoRegistro = (Get-ItemPropertyValue $SteamReg SteamPath -ErrorAction SilentlyContinue)
         $SteamExe = Join-Path $PathNoRegistro "steam.exe"
     }
 
-    # 2. Garantir que a Steam está aberta e LOGADA
-    Write-Host "`n[ !!! ] Por favor, faça LOGIN na sua conta Steam." -ForegroundColor Yellow
+    # 2. Aguardar Login Real (Lógica de PID + ActiveUser)
+    Write-Host "`n[ !!! ] Aguardando inicialização e LOGIN na Steam..." -ForegroundColor Yellow
     if (-not (Get-Process "steam" -ErrorAction SilentlyContinue)) {
         Start-Process $SteamExe
     }
 
-    Write-Host "Aguardando detecção de conta ativa..." -NoNewline
+    Write-Host "Status: Sincronizando com a conta" -NoNewline
     while ($true) {
-        $ActiveUser = (Get-ItemPropertyValue "HKCU:\Software\Valve\Steam\ActiveProcess" ActiveUser -ErrorAction SilentlyContinue)
-        if ($ActiveUser -and $ActiveUser -ne 0) { 
+        # Pega o PID que a Steam atual gravou no registro e o UserID
+        $RegPID = (Get-ItemPropertyValue $ActiveReg pid -ErrorAction SilentlyContinue)
+        $ActiveUser = (Get-ItemPropertyValue $ActiveReg ActiveUser -ErrorAction SilentlyContinue)
+        
+        # Pega os PIDs dos processos "steam" que estão rodando agora
+        $ActualPIDs = (Get-Process "steam" -ErrorAction SilentlyContinue).Id
+
+        # SÓ VALIDA se o PID no registro for de um processo ATIVO e o Usuário não for 0
+        if ($ActualPIDs -contains $RegPID -and $ActiveUser -and $ActiveUser -ne 0) { 
             Write-Host " [ CONECTADO ]" -ForegroundColor Green
             break 
         }
@@ -95,18 +102,18 @@ function Invoke-Setup {
         Start-Sleep -Seconds 2
     }
 
-    # 3. Disparar o download APÓS o login
+    # 3. Disparar instalação do CS2
     try {
         Write-Host "`n[ !!! ] Disparando instalação do CS2 via Steam..." -ForegroundColor Yellow
         Start-Process "steam://install/730" -ErrorAction Stop
-        Write-Host "O download deve ter iniciado na sua Steam." -ForegroundColor Gray
+        Write-Host "Verifique a janela da Steam para confirmar o download." -ForegroundColor Gray
     } catch {
         Write-Host "`n[ ERRO ] Falha ao enviar comando para a Steam." -ForegroundColor Red
         return
     }
     
     # 4. Monitoramento de pastas
-    Write-Host "`nMonitorando estrutura de pastas do jogo (isso pode demorar)..." -ForegroundColor Cyan
+    Write-Host "`nMonitorando estrutura de pastas do jogo..." -ForegroundColor Cyan
     $Concluido = $false
     while (-not $Concluido) {
         $CurrentSteamP = (Get-ItemPropertyValue $SteamReg SteamPath -ErrorAction SilentlyContinue)
