@@ -1,8 +1,7 @@
 # ============================================================
 # ONLYGOES INFORMÁTICA E TECNOLOGIA - CS2 ACT (Autoconfig Tool)
-# Versão: 1.1.1 | Data: 17/04/2026
 # ============================================================
-$VERSION = "1.1.3" # [AUTO-UPDATE-VERSION]
+$VERSION = "1.1.5" # [AUTO-UPDATE-VERSION]
 
 # --- CONFIGURAÇÕES ESTÁTICAS ---
 $APPID      = 730
@@ -37,21 +36,24 @@ function Get-ContasSteam {
     return $Contas
 }
 
+# --- FUNÇÃO SELECT-CONTA (Ajustada para timeout) ---
 function Select-Conta {
     $Contas = Get-ContasSteam
     if (-not $Contas -or $Contas.Count -eq 0) { 
-        Write-Host "`n[ ERRO ] Nenhuma conta da Steam com dados locais foi encontrada." -ForegroundColor Red
-        Read-Host "Pressione ENTER para voltar ao menu principal..."
+        Write-Host "`n[ ERRO ] Nenhuma conta encontrada. Retornando em 3s..." -ForegroundColor Red
+        Start-Sleep -Seconds 3
         return $null 
     }
     Write-Host "`n=============================================" -ForegroundColor Cyan
     Write-Host " SELECIONE A CONTA" -ForegroundColor Yellow
     Write-Host "=============================================" -ForegroundColor Cyan
     for ($i=0; $i -lt $Contas.Count; $i++) { Write-Host " [ $($i+1) ] - $($Contas[$i].Nick) ($($Contas[$i].ID))" }
-    $sel = Read-Host "`nDigite o número da conta"
+    
+    $sel = Read-Host "`nDigite o número"
     if ($sel -match '^\d+$' -and $sel -gt 0 -and $sel -le $Contas.Count) { return $Contas[[int]$sel-1] }
-    Write-Host "`n[ ERRO ] Opção inválida!" -ForegroundColor Red
-    Read-Host "Pressione ENTER para tentar novamente..."
+    
+    Write-Host "`n[ ERRO ] Opção inválida! Voltando ao menu..." -ForegroundColor Red
+    Start-Sleep -Seconds 3
     return $null
 }
 
@@ -78,22 +80,15 @@ function Invoke-Setup {
         $SteamExe = Join-Path $PathNoRegistro "steam.exe"
     }
 
-    # 2. Aguardar Login Real (Lógica de PID + ActiveUser)
-    Write-Host "`n[ !!! ] Aguardando inicialização e LOGIN na Steam..." -ForegroundColor Yellow
-    if (-not (Get-Process "steam" -ErrorAction SilentlyContinue)) {
-        Start-Process $SteamExe
-    }
+    #2. Aguardar Login Real
+    Write-Host "`n[ !!! ] Aguardando login na Steam..." -ForegroundColor Yellow
+    if (-not (Get-Process "steam" -ErrorAction SilentlyContinue)) { Start-Process $SteamExe }
 
-    Write-Host "Status: Sincronizando com a conta" -NoNewline
+    Write-Host "Status: Sincronizando" -NoNewline
     while ($true) {
-        # Pega o PID que a Steam atual gravou no registro e o UserID
         $RegPID = (Get-ItemPropertyValue $ActiveReg pid -ErrorAction SilentlyContinue)
         $ActiveUser = (Get-ItemPropertyValue $ActiveReg ActiveUser -ErrorAction SilentlyContinue)
-        
-        # Pega os PIDs dos processos "steam" que estão rodando agora
         $ActualPIDs = (Get-Process "steam" -ErrorAction SilentlyContinue).Id
-
-        # SÓ VALIDA se o PID no registro for de um processo ATIVO e o Usuário não for 0
         if ($ActualPIDs -contains $RegPID -and $ActiveUser -and $ActiveUser -ne 0) { 
             Write-Host " [ CONECTADO ]" -ForegroundColor Green
             break 
@@ -102,13 +97,14 @@ function Invoke-Setup {
         Start-Sleep -Seconds 2
     }
 
-    # 3. Disparar instalação do CS2
+    # 3. Disparar instalação (Sem pausa manual agora!)
     try {
-        Write-Host "`n[ !!! ] Disparando instalação do CS2 via Steam..." -ForegroundColor Yellow
+        Write-Host "`n[ !!! ] Disparando instalação do CS2..." -ForegroundColor Yellow
         Start-Process "steam://install/730" -ErrorAction Stop
-        Write-Host "Verifique a janela da Steam para confirmar o download." -ForegroundColor Gray
+        # Removido o Read-Host daqui para fluir direto para o monitoramento
     } catch {
-        Write-Host "`n[ ERRO ] Falha ao enviar comando para a Steam." -ForegroundColor Red
+        Write-Host "`n[ ERRO ] Falha no protocolo. Retornando..." -ForegroundColor Red
+        Start-Sleep -Seconds 3
         return
     }
     
@@ -178,15 +174,15 @@ function Invoke-Restore {
     Write-Host "`n[OK] Configurações aplicadas para $($Conta.Nick)!" -ForegroundColor Green; Start-Sleep -Seconds 3
 }
 
-# --- MENU PRINCIPAL ---
+# --- MENU PRINCIPAL (Ajustado com default case) ---
 do {
     Clear-Host
     Write-Host "=========================================" -ForegroundColor Cyan
     Write-Host " ONLYGOES - CS2 ACT v$VERSION" -ForegroundColor Yellow
     Write-Host "=========================================" -ForegroundColor Cyan
-    Write-Host " [ 1 ] Extrair configurações (Salvar na Área de Trabalho)"
-    Write-Host " [ 2 ] Restaurar configurações (Aplicar autoexec.cfg na conta Steam)"
-    Write-Host " [ 3 ] Preparar ambiente (Instala Steam, inicia instalação do CS2)"
+    Write-Host " [ 1 ] Extrair configurações (Desktop)"
+    Write-Host " [ 2 ] Restaurar configurações (Steam)"
+    Write-Host " [ 3 ] Preparar ambiente (Instalação)"
     Write-Host " [ 0 ] Sair"
     Write-Host "=========================================" -ForegroundColor Cyan
     $Op = Read-Host "Opção"
@@ -194,5 +190,10 @@ do {
         '1' { Invoke-Extract }
         '2' { Invoke-Restore }
         '3' { Invoke-Setup }
+        '0' { break }
+        default { 
+            Write-Host "`n[ ! ] Opção inválida. Tente novamente..." -ForegroundColor Red
+            Start-Sleep -Seconds 2
+        }
     }
 } until ($Op -eq '0')
