@@ -148,19 +148,19 @@ function Invoke-Restore {
 
 # --- MENU PRINCIPAL ---
 do {
-    # Clear-Host  <-- DEBUG MODE!
+    Clear-Host
     Write-Host "=========================================" -ForegroundColor Cyan
-    Write-Host " ONLYGOES - CS2 AUTOCONFIG TOOL" -ForegroundColor Yellow
+    Write-Host " ONLYGOES - CS2 ACT (Autoconfig Tool)" -ForegroundColor Yellow
     Write-Host "=========================================" -ForegroundColor Cyan
-    Write-Host " [ 1 ] Preparar Ambiente (Setup Steam/CS2)"
-    Write-Host " [ 2 ] Extrair Configurações (Save to Desktop)"
-    Write-Host " [ 3 ] Restaurar Configurações (Apply to Account)"
+    Write-Host " [ 1 ] Extrair configurações (Salvar na Área de Trabalho)"
+    Write-Host " [ 2 ] Restaurar configurações (Aplicar autoexec.cfg na conta Steam)"
+    Write-Host " [ 3 ] Preparar ambiente (Instala Steam, inicia instalação do CS2)"
     Write-Host " [ 0 ] Sair"
     Write-Host "=========================================" -ForegroundColor Cyan
     $Op = Read-Host "Opção"
     switch ($Op) {
-        '1' { Invoke-Setup }
-        '2' { Invoke-Extract }
-        '3' { Invoke-Restore }
+        '1' { Invoke-Extract }
+        '2' { Invoke-Restore }
+        '3' { Invoke-Setup }
     }
 } until ($Op -eq '0')
