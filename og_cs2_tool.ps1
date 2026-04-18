@@ -1,7 +1,8 @@
 # ============================================================
-# ONLYGOES INFORMÁTICA E TECNOLOGIA - CS2 AUTOCONFIG TOOL
-# Versão Unificada: Setup, Extração e Restauração
+# ONLYGOES INFORMÁTICA E TECNOLOGIA - CS2 ACT (Autoconfig Tool)
+# Versão: 1.1.0 | Data: 17/04/2026
 # ============================================================
+$VERSION = "1.1.0" # [AUTO-UPDATE-VERSION]
 
 # --- CONFIGURAÇÕES ESTÁTICAS (Antiga Seção 1) ---
 $APPID      = 730
@@ -180,7 +181,7 @@ function Invoke-Restore {
 do {
     Clear-Host
     Write-Host "=========================================" -ForegroundColor Cyan
-    Write-Host " ONLYGOES - CS2 ACT (Autoconfig Tool)" -ForegroundColor Yellow
+    Write-Host " ONLYGOES - CS2 ACT v$VERSION" -ForegroundColor Yellow
     Write-Host "=========================================" -ForegroundColor Cyan
     Write-Host " [ 1 ] Extrair configurações (Salvar na Área de Trabalho)"
     Write-Host " [ 2 ] Restaurar configurações (Aplicar autoexec.cfg na conta Steam)"
