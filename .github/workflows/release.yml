@@ -51,11 +51,11 @@ jobs:
           # Garante que o título esteja no topo
           sed -i '1i # Changelog - CS2 ACT (Autoconfig Tool)\n' CHANGELOG.md
 
-      - name: Commit and Push changes
+      -- name: Commit and Push changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add og_cs2_tool.ps1 CHANGELOG.md
-          # O [skip ci] evita que o robô entre em loop infinito
           git commit -m "chore: atualizando para v${{ steps.vars.outputs.version }} [skip ci]"
-          git push origin main
+          # Empurra o estado atual (HEAD) para a branch remota main
+          git push origin HEAD:main
