@@ -2,7 +2,7 @@
 # ONLYGOES INFORMÁTICA E TECNOLOGIA - CS2 ACT (Autoconfig Tool)
 # ============================================================
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$VERSION = "1.2.3" # [AUTO-UPDATE-VERSION]
+$VERSION = "1.2.5" # [AUTO-UPDATE-VERSION]
 
 # --- CONFIGURAÇÕES ESTÁTICAS ---
 $APPID      = 730
@@ -81,9 +81,17 @@ function Select-Conta {
         Write-Host " [ $($i+1) ] - $($Contas[$i].Nick) ($($Contas[$i].ID))" 
     }
     
-    $sel = Read-Host "`nDigite o número da conta"
-    if ($sel -match '^\d+$' -and $sel -gt 0 -and $sel -le $Contas.Count) { 
-        return $Contas[[int]$sel-1] 
+    Write-Host "`nDigite o número da conta: " -NoNewline
+    # COMPORTAMENTO SEM ENTER: Captura a tecla instantaneamente
+    $Key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    $sel = $Key.Character
+    Write-Host $sel # Exibe a tecla pressionada
+
+    if ($sel -match '^[1-9]$') {
+        $idx = [int][string]$sel - 1
+        if ($idx -lt $Contas.Count) {
+            return $Contas[$idx]
+        }
     }
     
     Write-Host "`n[ ERRO ] Opção inválida! Voltando ao menu..." -ForegroundColor Red
@@ -150,7 +158,6 @@ function Invoke-Extract {
     $autoexec = "$([Environment]::GetFolderPath('Desktop'))\autoexec.cfg"
     $GamePath = $null
     
-    # Busca bibliotecas via Regex
     $Libs = @($SteamPath)
     $VdfPath = Join-Path $SteamPath "steamapps\libraryfolders.vdf"
     if (Test-Path $VdfPath) {
@@ -193,24 +200,24 @@ function Invoke-Extract {
     Read-VCFG "$tempDir\$USER_VCFG" "USER CONVARS"
     Read-VCFG "$tempDir\$MACH_VCFG" "MACHINE SETTINGS"
     
-    # --- GARANTIA DE PERSISTÊNCIA ---
     [void]$sb.AppendLine("`n// Comando de finalização")
     [void]$sb.AppendLine("host_writeconfig")
 
     $sb.ToString() | Set-Content $autoexec -Force
-    Write-Host "`n[ OK ] Autoexec gerado no Desktop com host_writeconfig!" -ForegroundColor Green
-    Start-Sleep -Seconds 2
+    # TEXTO AJUSTADO v1.2.5
+    Write-Host "`nautoexec.cfg gerado com sucesso, salvo na área de trabalho." -ForegroundColor Green
+    Start-Sleep -Seconds 4
 }
 
 function Invoke-Restore {
     $Autoexec = "$([Environment]::GetFolderPath('Desktop'))\autoexec.cfg"
     if (-not (Test-Path $Autoexec)) { 
-        Write-Host "`n[ ERRO ] autoexec.cfg não encontrado no Desktop!" -ForegroundColor Red
+        # TEXTO AJUSTADO v1.2.5
+        Write-Host "`n[ ERRO ] autoexec.cfg não encontrado na área de trabalho!" -ForegroundColor Red
         Start-Sleep -Seconds 3
         return 
     }
 
-    # 1. Identificar Usuário Logado (O ID de números)
     $ActiveReg = "HKCU:\Software\Valve\Steam\ActiveProcess"
     $SteamID = (Get-ItemPropertyValue $ActiveReg ActiveUser -ErrorAction SilentlyContinue)
 
@@ -224,14 +231,15 @@ function Invoke-Restore {
     $SteamReg = "HKCU:\SOFTWARE\Valve\Steam"
     $SteamPath = (Get-ItemPropertyValue $SteamReg SteamPath)
     
-    # --- ATAQUE RÁPIDO: Userdata ---
+    # --- ATAQUE RÁPIDO ---
     $DestinoUserdata = Join-Path $SteamPath "userdata\$SteamID\$APPID\local\cfg"
-    Write-Host "`n[ ATAQUE RÁPIDO ] Injetando no perfil do usuário $SteamID..." -ForegroundColor Cyan
+    # TEXTO AJUSTADO v1.2.5
+    Write-Host "`n[ ATAQUE RÁPIDO ] Plantando configs no perfil do usuário $SteamID..." -ForegroundColor Cyan
     if (-not (Test-Path $DestinoUserdata)) { New-Item -ItemType Directory -Force -Path $DestinoUserdata | Out-Null }
     Copy-Item -Path $Autoexec -Destination "$DestinoUserdata\autoexec.cfg" -Force
     Write-Host "[ OK ] Configuração plantada no perfil!" -ForegroundColor Green
 
-    # --- ATAQUE NINJA: Staging/Global (Fallback) ---
+    # --- ATAQUE NINJA ---
     $Libs = @($SteamPath)
     $VdfPath = Join-Path $SteamPath "steamapps\libraryfolders.vdf"
     if (Test-Path $VdfPath) {
@@ -259,8 +267,9 @@ function Invoke-Restore {
         }
     }
 
-    Write-Host "`n[ SUCESSO ] O ambiente OnlyGoes está pronto!" -ForegroundColor Yellow
-    Start-Sleep -Seconds 6
+    # TEXTO AJUSTADO v1.2.5
+    Write-Host "`n[ SUCESSO ] “Configs aplicadas. Go, go, go!”" -ForegroundColor Green
+    Start-Sleep -Seconds 5
 }
 
 # --- INÍCIO DA EXECUÇÃO ---
@@ -285,8 +294,9 @@ do {
         '3' { Invoke-Setup }
         '0' { 
             Clear-Host
-            Write-Host "`nObrigado por usar as ferramentas OnlyGoes!" -ForegroundColor Cyan
-            Start-Sleep -Seconds 1
+            # TEXTO AJUSTADO v1.2.5 (Easy Peasy Lemon Squeezy 🍋)
+            Write-Host "`nEasy Peasy Lemon Squeezy 🍋" -ForegroundColor Green
+            Start-Sleep -Seconds 2
             Stop-Process -Id $PID 
         }
         default { 
