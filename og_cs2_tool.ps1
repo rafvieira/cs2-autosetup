@@ -1,7 +1,7 @@
 # ============================================================
 # ONLYGOES INFORMÁTICA E TECNOLOGIA - CS2 ACT (Autoconfig Tool)
 # ============================================================
-$VERSION = "1.1.5" # [AUTO-UPDATE-VERSION]
+$VERSION = "1.1.4" # [AUTO-UPDATE-VERSION]
 
 # --- CONFIGURAÇÕES ESTÁTICAS ---
 $APPID      = 730
