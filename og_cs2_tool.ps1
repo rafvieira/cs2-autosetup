@@ -69,26 +69,44 @@ function Invoke-Setup {
     $PathNoRegistro = (Get-ItemPropertyValue $SteamReg SteamPath -ErrorAction SilentlyContinue)
     $SteamExe = if ($PathNoRegistro) { Join-Path $PathNoRegistro "steam.exe" } else { $null }
 
+    # 1. Instalação (se necessário)
     if (-not (Test-Path $SteamReg) -or -not (Test-Path $SteamExe)) {
-        Write-Host "`n[ SETUP ] Steam não encontrada ou incompleta. Instalando via Winget..." -ForegroundColor Cyan
+        Write-Host "`n[ SETUP ] Steam não encontrada. Instalando via Winget..." -ForegroundColor Cyan
         winget install --id Valve.Steam -e --source winget --silent --accept-source-agreements --accept-package-agreements --force
-        Write-Host "Aguardando inicialização do sistema..." -NoNewline
-        for ($i=0; $i -lt 5; $i++) { Write-Host "." -NoNewline; Start-Sleep -Seconds 1 }
-    } else {
-        Write-Host "`n[ OK ] Steam detectada em: $PathNoRegistro" -ForegroundColor Green
+        # Pega o caminho após a instalação
+        $PathNoRegistro = (Get-ItemPropertyValue $SteamReg SteamPath -ErrorAction SilentlyContinue)
+        $SteamExe = Join-Path $PathNoRegistro "steam.exe"
     }
 
+    # 2. Garantir que a Steam está aberta e LOGADA
+    Write-Host "`n[ !!! ] Por favor, faça LOGIN na sua conta Steam." -ForegroundColor Yellow
+    if (-not (Get-Process "steam" -ErrorAction SilentlyContinue)) {
+        Start-Process $SteamExe
+    }
+
+    Write-Host "Aguardando detecção de conta ativa..." -NoNewline
+    while ($true) {
+        $ActiveUser = (Get-ItemPropertyValue "HKCU:\Software\Valve\Steam\ActiveProcess" ActiveUser -ErrorAction SilentlyContinue)
+        if ($ActiveUser -and $ActiveUser -ne 0) { 
+            Write-Host " [ CONECTADO ]" -ForegroundColor Green
+            break 
+        }
+        Write-Host "." -NoNewline
+        Start-Sleep -Seconds 2
+    }
+
+    # 3. Disparar o download APÓS o login
     try {
         Write-Host "`n[ !!! ] Disparando instalação do CS2 via Steam..." -ForegroundColor Yellow
         Start-Process "steam://install/730" -ErrorAction Stop
-        Read-Host "`nPressione ENTER apenas quando o download do CS2 aparecer na Steam"
+        Write-Host "O download deve ter iniciado na sua Steam." -ForegroundColor Gray
     } catch {
-        Write-Host "`n[ ERRO ] Falha ao iniciar protocolo Steam." -ForegroundColor Red
-        Read-Host "Pressione ENTER para voltar..."
+        Write-Host "`n[ ERRO ] Falha ao enviar comando para a Steam." -ForegroundColor Red
         return
     }
     
-    Write-Host "Monitorando estrutura de pastas do jogo..." -ForegroundColor Cyan
+    # 4. Monitoramento de pastas
+    Write-Host "`nMonitorando estrutura de pastas do jogo (isso pode demorar)..." -ForegroundColor Cyan
     $Concluido = $false
     while (-not $Concluido) {
         $CurrentSteamP = (Get-ItemPropertyValue $SteamReg SteamPath -ErrorAction SilentlyContinue)

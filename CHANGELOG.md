@@ -1,7 +1,7 @@
 # Changelog - CS2 ACT (Autoconfig Tool)
 
 Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
-## [1.1.1] - 2026-04-18
+## [1.1.1] - 2026-04-17
 ### Atualização automática via Tag
 
 
@@ -16,6 +16,6 @@ Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 - **Refatoração de Código:** Renomeação de funções para seguir os verbos aprovados do PowerShell (`Select-Conta`, `Read-VCFG`).
 - **Estilo Visual:** Padronização de cores (Ciano, Amarelo, Verde e Vermelho) para melhor feedback visual no terminal.
 
-## [1.0.0] - 2026-04-15
+## [1.0.0] - 2026-04-17
 ### Adicionado
 - Versão inicial com scripts modulares separados para extração de configurações de vídeo e binds.
