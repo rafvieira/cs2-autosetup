@@ -1,5 +1,11 @@
 # Changelog - CS2 ACT (Autoconfig Tool)
 
+## [1.2.8] - 2026-04-18
+- Merge branch 'main' of https://github.com/rafvieira/cs2-autosetup
+- feat: identifica GPUs e cria cs2_video com IDs corretos no restore v1.2.8
+- chore: v1.2.7.1 liberada pelo Bot Zed [skip ci]
+
+
 ## [1.2.7.1] - 2026-04-18
 - Merge branch 'main' of https://github.com/rafvieira/cs2-autosetup
 - ux: hotfix nas mensagens de extração e atualização do contexto v1.2.7.1
