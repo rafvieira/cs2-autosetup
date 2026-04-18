@@ -2,7 +2,7 @@
 # ONLYGOES INFORMÁTICA E TECNOLOGIA - CS2 ACT (Autoconfig Tool)
 # ============================================================
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$VERSION = "1.2.7" # [AUTO-UPDATE-VERSION]
+$VERSION = "1.2.7.1" # [AUTO-UPDATE-VERSION]
 
 # --- CONFIGURAÇÕES ESTÁTICAS ---
 $APPID      = 730
@@ -152,8 +152,6 @@ function Invoke-Extract {
     $SteamPath = (Get-ItemPropertyValue "HKCU:\SOFTWARE\Valve\Steam" SteamPath)
     $USRLOCAL = "$($Conta.Path)\$APPID\local"
     $DesktopPath = [Environment]::GetFolderPath('Desktop')
-    
-    # v1.2.7: Nome do arquivo agora usa o SteamID para evitar erro com colchetes []
     $OutputFile = Join-Path $DesktopPath "BKP_CFG_$($Conta.ID).og"
     
     $GamePath = $null
@@ -180,7 +178,7 @@ function Invoke-Extract {
 
     $sb = New-Object System.Text.StringBuilder
     [void]$sb.AppendLine("// OG_BACKUP_VERSION: $VERSION")
-    [void]$sb.AppendLine("// OnlyGoes Autoexec - Conta: $($Conta.Nick)") # Mantemos o Nick aqui para o menu de Restore
+    [void]$sb.AppendLine("// OnlyGoes Autoexec - Conta: $($Conta.Nick)") 
     
     function Read-VCFG($file, $header, $prefix = "") {
         if (Test-Path $file) {
@@ -209,11 +207,11 @@ function Invoke-Extract {
     }
     [void]$sb.AppendLine("`n---ONLYGOES-VIDEO-END---")
 
-    # Gravando com LiteralPath para máxima segurança contra caracteres especiais
     $sb.ToString() | Out-File -LiteralPath $OutputFile -Encoding UTF8 -Force
     
-    Write-Host "`n[ OK ] Extraído de: $($Conta.Nick)" -ForegroundColor Cyan
-    Write-Host "autoexec.cfg gerado com sucesso, salvo na área de trabalho." -ForegroundColor Green
+    # HOTFIX UX v1.2.7.1
+    Write-Host "`nBackup de configurações da conta `"$($Conta.ID)`", BOT `"$($Conta.Nick)`" concluído com sucesso." -ForegroundColor Green
+    Write-Host "Arquivo salvo na área de trabalho." -ForegroundColor Cyan
     Start-Sleep -Seconds 4
 }
 
@@ -228,19 +226,12 @@ function Invoke-Restore {
     }
 
     $SelectedBkp = $null
-    
-    # v1.2.7: Mapeamento de backups para exibir Nicks amigáveis em vez de IDs numéricos
     $BackupMap = @()
     foreach ($file in $Backups) {
-        # Lê a segunda linha para pegar o nickname que salvamos na extração
         $HeaderLine = Get-Content -LiteralPath $file.FullName -TotalCount 2 | Select-Object -Last 1
         $NickInFile = "Desconhecido"
         if ($HeaderLine -match 'Conta: (.*)') { $NickInFile = $matches[1] }
-        
-        $BackupMap += [PSCustomObject]@{
-            File = $file
-            Nick = $NickInFile
-        }
+        $BackupMap += [PSCustomObject]@{ File = $file; Nick = $NickInFile }
     }
 
     if ($BackupMap.Count -eq 1) {

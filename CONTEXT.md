@@ -1,31 +1,18 @@
-# Contexto de Desenvolvimento - CS2 ACT (Autoconfig Tool)
+# OnlyGoes CS2 AutoConfig Tool - Contexto Técnico
 
-## 🎯 Objetivo do Projeto
-O **CS2 ACT** é uma ferramenta de automação desenvolvida para a **OnlyGoes Informática e Tecnologia**. O objetivo é padronizar e acelerar o processo de configuração do Counter-Strike 2, permitindo extrair, restaurar e preparar o ambiente (instalação de Steam e CS2) com foco em UX e robustez técnica.
+## Visão Geral
+Ferramenta de automação para backup, restauração e preparação de ambiente do Counter-Strike 2. O foco principal é a portabilidade de configurações entre máquinas e contas.
 
-## 🛠️ Arquitetura e Decisões Técnicas
+## Estado Atual (v1.2.7.1)
+- **Container .og**: Implementação de um formato de arquivo proprietário (`.og`) que serializa dados de `autoexec.cfg` e `cs2_video.txt` em um único volume.
+- **Lógica de Backend (SteamID)**: Os arquivos físicos de backup são nomeados via SteamID numérico para garantir compatibilidade com o sistema de arquivos do Windows (evitando caracteres proibidos em nicknames).
+- **Lógica de Frontend (Nicknames)**: O script realiza um "pre-flight check" nos arquivos `.og` para extrair e exibir nomes amigáveis no menu de restauração.
 
-### 1. Interface e Experiência do Usuário (UI/UX)
-- **Splash Screen:** Banner em arte Braille/ASCII exibido na inicialização para reforçar a identidade visual da OnlyGoes.
-- **Navegação Fluida:** Transição de menus com limpeza automática de tela (`Clear-Host`) e captura de teclas instantânea via hardware (previsto para v1.2.0), eliminando a necessidade da tecla "Enter".
-- **Feedback Visual:** Codificação por cores (Ciano: Títulos, Amarelo: Alertas, Verde: Sucesso, Vermelho: Erros).
+## Decisões de Arquitetura
+1. **Ataque Rápido**: Restauração focada no diretório `userdata` da Steam, garantindo que as configurações de perfil (soberanas) sejam aplicadas mesmo antes do término do download dos arquivos globais do jogo.
+2. **Sanitização**: Uso de `LiteralPath` e `UTF8` em todas as operações de I/O para preservar a integridade dos arquivos originais da Valve.
+3. **Persistência**: Inclusão mandatória do comando `host_writeconfig` no fim do fluxo de extração para forçar a sincronização local.
 
-### 2. Módulo de Preparação de Ambiente (`Invoke-Setup`)
-- **Instalação Resiliente:** Uso do `winget` com flag `--force`. A detecção de presença do software ignora registros "sujos" do Windows e foca na existência física do executável `steam.exe`.
-- **Validação de Login por PID:** O script não dispara o download do jogo apenas por detectar um usuário logado no registro. Ele valida se o `PID` (Process ID) gravado no registro pertence à instância da Steam que está rodando no momento, evitando falsos positivos de sessões antigas.
-- **Monitoramento de Pastas:** Detecção em tempo real da estrutura `game/csgo/cfg`. O script libera o próximo passo assim que as pastas são criadas, permitindo o restauro de configs antes mesmo do término do download total do jogo.
-
-### 3. Engenharia de PowerShell
-- **Verbos Aprovados:** Funções renomeadas (ex: `Select-Conta`, `Read-VCFG`) para total compatibilidade com os padrões de desenvolvimento da Microsoft e ferramentas de linting (PSScriptAnalyzer).
-- **Consolidação de Dados:** Extração inteligente que cruza dados da pasta `userdata` da Steam com os arquivos globais da instalação do jogo.
-
-## 🚀 Automação e CI/CD
-- **GitHub Actions:** Workflow (`release.yml`) que monitora Git Tags (`v*`).
-- **Auto-Update:** O processo automatiza a alteração da variável `$VERSION` no código-fonte e atualiza o `CHANGELOG.md` sem intervenção manual, garantindo que o link de instalação pública (`irm`) sempre sirva a versão mais recente.
-
-## 📌 Roadmap Curto Prazo
-- Implementação de captura de tecla sem "Enter" para o menu principal.
-- Refatoração final de variáveis para eliminação de alertas de "assigned but never used" no editor.
-
----
-*Documento gerado para suporte ao desenvolvimento da OnlyGoes Informática e Tecnologia.*
+## Próximos Passos
+- Monitoramento de feedback de usuários reais sobre a restauração de vídeo em hardwares diferentes.
+- Refinamento do pipeline de CI/CD (Bot Zed) para maior silêncio no histórico de commits.
