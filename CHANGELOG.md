@@ -1,5 +1,11 @@
 # Changelog - CS2 ACT (Autoconfig Tool)
 
+## [1.2.6] - 2026-04-18
+- Merge branch 'main' of https://github.com/rafvieira/cs2-autosetup
+- feat: container .og e restauração completa de vídeo v1.2.6
+- chore: v1.2.5 liberada pelo Bot Zed [skip ci]
+
+
 ## [1.2.5] - 2026-04-18
 - Merge branch 'main' of https://github.com/rafvieira/cs2-autosetup
 - ux: ajustes nos textos das funções, melhorias diversas na interface v1.2.5
