@@ -2,7 +2,7 @@
 # ONLYGOES INFORMÁTICA E TECNOLOGIA - CS2 ACT (Autoconfig Tool)
 # ============================================================
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$VERSION = "1.2.6" # [AUTO-UPDATE-VERSION]
+$VERSION = "1.2.6.1" # [AUTO-UPDATE-VERSION]
 
 # --- CONFIGURAÇÕES ESTÁTICAS ---
 $APPID      = 730
@@ -199,7 +199,7 @@ function Invoke-Extract {
     [void]$sb.AppendLine("`nhost_writeconfig")
     [void]$sb.AppendLine("---ONLYGOES-AUTOEXEC-END---")
 
-    # EMPACOTAMENTO DE VÍDEO (Encoding Preserved)
+    # EMPACOTAMENTO DE VÍDEO
     [void]$sb.AppendLine("---ONLYGOES-VIDEO-START---")
     $VideoFile = "$tempDir\$VIDEO_TXT"
     if (Test-Path $VideoFile) {
@@ -208,7 +208,9 @@ function Invoke-Extract {
     }
     [void]$sb.AppendLine("`n---ONLYGOES-VIDEO-END---")
 
-    $sb.ToString() | Set-Content -Path $OutputFile -Encoding UTF8
+    # HOTFIX 1.2.6.1: Out-File para garantir encoding universal
+    $sb.ToString() | Out-File -FilePath $OutputFile -Encoding UTF8 -Force
+    
     Write-Host "`nautoexec.cfg gerado com sucesso, salvo na área de trabalho." -ForegroundColor Green
     Start-Sleep -Seconds 4
 }
@@ -256,19 +258,19 @@ function Invoke-Restore {
     $Destino = Join-Path $SteamPath "userdata\$SteamID\$APPID\local\cfg"
     if (-not (Test-Path $Destino)) { New-Item -ItemType Directory -Force -Path $Destino | Out-Null }
 
-    # DESEMPACOTAMENTO (Unpacker Logic)
+    # DESEMPACOTAMENTO
     Write-Host "`n[ ATAQUE RÁPIDO ] Plantando configs no perfil do usuário $SteamID..." -ForegroundColor Cyan
     $RawData = Get-Content -Path $SelectedBkp.FullName -Raw -Encoding UTF8
     
     # Extrair Autoexec
     $AutoContent = ($RawData -split "---ONLYGOES-AUTOEXEC-END---")[0]
-    $AutoContent | Set-Content -Path (Join-Path $Destino "autoexec.cfg") -Encoding UTF8
+    $AutoContent | Out-File -FilePath (Join-Path $Destino "autoexec.cfg") -Encoding UTF8 -Force
     
     # Extrair Vídeo
-    $VideoPart = ($RawData -split "---ONLYGOES-VIDEO-START---")[1]
-    if ($VideoPart) {
+    if ($RawData -match "---ONLYGOES-VIDEO-START---") {
+        $VideoPart = ($RawData -split "---ONLYGOES-VIDEO-START---")[1]
         $VideoContent = ($VideoPart -split "---ONLYGOES-VIDEO-END---")[0].Trim()
-        $VideoContent | Set-Content -Path (Join-Path $Destino $VIDEO_TXT) -Encoding UTF8
+        $VideoContent | Out-File -FilePath (Join-Path $Destino $VIDEO_TXT) -Encoding UTF8 -Force
         Write-Host "[ OK ] Configurações de vídeo restauradas!" -ForegroundColor Green
     }
 
