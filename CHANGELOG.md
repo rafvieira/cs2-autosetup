@@ -1,5 +1,17 @@
 # Changelog - CS2 ACT (Autoconfig Tool)
 
+## [1.2.0] - 2026-04-18
+- ci: permissões de escrita e batismo do Bot Zed
+- feat: v1.2.0 - Menu instantâneo, correção de variáveis e workflow inteligente
+- fix: consolida script v1.2.0 e resolve erro de sintaxe
+- ci: corrige erro de detached HEAD no push do robo
+- ui: menu instantâneo com ReadKey
+- docs: limpeza e organização manual do changelog
+- chore: bump version to 1.2.0 [skip ci]
+- feat: v1.2.0 - Menu instantâneo, correção de variáveis e CONTEXT.md
+- chore: bump version to 1.1.9 [skip ci]
+
+
 Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 
 ## [1.2.0] - 2026-04-18
