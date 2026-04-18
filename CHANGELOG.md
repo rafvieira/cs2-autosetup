@@ -1,6 +1,9 @@
 # Changelog - CS2 ACT (Autoconfig Tool)
 
 Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
+## [1.1.2] - 2026-04-18
+### Atualização automática via Tag
+
 ## [1.1.1] - 2026-04-17
 ### Atualização automática via Tag
 

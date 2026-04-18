@@ -2,7 +2,7 @@
 # ONLYGOES INFORMÁTICA E TECNOLOGIA - CS2 ACT (Autoconfig Tool)
 # Versão: 1.1.1 | Data: 17/04/2026
 # ============================================================
-$VERSION = "1.1.1" # [AUTO-UPDATE-VERSION]
+$VERSION = "1.1.2" # [AUTO-UPDATE-VERSION]
 
 # --- CONFIGURAÇÕES ESTÁTICAS ---
 $APPID      = 730
