@@ -1,42 +1,41 @@
 # Changelog - CS2 ACT (Autoconfig Tool)
 
 Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
+
 ## [1.2.0] - 2026-04-18
-### Atualização automática via Tag
+### Adicionado
+- **Menu Instantâneo:** Implementação de captura de tecla via hardware (`ReadKey`), eliminando a necessidade de apertar "Enter" no menu principal.
+- **Documentação de Contexto:** Adicionado o arquivo `CONTEXT.md` para guiar futuros desenvolvimentos e explicar decisões de engenharia.
+- **Refatoração de Variáveis:** Limpeza de avisos de linter e otimização do uso da variável `$ActiveReg`.
 
 ## [1.1.9] - 2026-04-18
-### Atualização automática via Tag
+### Modificado
+- **Monitoramento Eager:** O script agora libera o restauro de configurações assim que a pasta `cfg` é detectada, sem esperar o fim do download de 30GB+.
+- **UX Flow:** Remoção de pausas manuais desnecessárias para um fluxo mais contínuo.
 
 ## [1.1.7] - 2026-04-18
-### Atualização automática via Tag
+### Adicionado
+- **Splash Screen:** Tela de introdução (Intro) de 3 segundos com a identidade visual OnlyGoes.
+- **Limpeza de Tela:** Implementação de `Clear-Host` sistemático para manter o menu sempre limpo após cada ação.
 
 ## [1.1.6] - 2026-04-18
-### Atualização automática via Tag
-
-## [1.1.4] - 2026-04-18
-### Atualização automática via Tag
+### Adicionado
+- **Identidade Visual:** Inclusão do banner em arte Braille/ASCII alinhado.
+- **Auto-Close:** Comando `Stop-Process` para encerrar o terminal completamente ao sair da ferramenta.
 
 ## [1.1.3] - 2026-04-18
-### Atualização automática via Tag
-
-## [1.1.2] - 2026-04-18
-### Atualização automática via Tag
+### Corrigido
+- **Deteção de Login:** Implementação de validação por PID (Process ID) para evitar falsos positivos de sessões antigas da Steam no registro do Windows.
 
 ## [1.1.1] - 2026-04-17
-### Atualização automática via Tag
-
+### Corrigido
+- **Lógica de Setup:** Adicionada verificação física do executável `steam.exe` para forçar a reinstalação via Winget mesmo com registros corrompidos.
 
 ## [1.1.0] - 2026-04-17
 ### Adicionado
-- **Menu Unificado:** Consolidação dos scripts de Extração, Restauração e Setup em um único executável (`og_cs2_tool.ps1`).
-- **Logica de Reinstalação:** Adicionada verificação física de `steam.exe` e flag `--force` no Winget para garantir a instalação em ambientes com registros corrompidos.
-- **Tratamento de Erros:** Implementação de blocos `try/catch` para o protocolo `steam://` e validação de permissões de Administrador.
-
-### Modificado
-- **Reordenação de UX:** O menu agora prioriza o fluxo de jogo (Extrair/Restaurar) antes do Setup técnico.
-- **Refatoração de Código:** Renomeação de funções para seguir os verbos aprovados do PowerShell (`Select-Conta`, `Read-VCFG`).
-- **Estilo Visual:** Padronização de cores (Ciano, Amarelo, Verde e Vermelho) para melhor feedback visual no terminal.
+- **Menu Unificado:** Consolidação dos scripts de Extração, Restauração e Setup em um único executável.
+- **Tratamento de Erros:** Implementação de blocos `try/catch` para o protocolo `steam://`.
 
 ## [1.0.0] - 2026-04-17
 ### Adicionado
-- Versão inicial com scripts modulares separados para extração de configurações de vídeo e binds.
+- Versão inicial com scripts modulares separados.
