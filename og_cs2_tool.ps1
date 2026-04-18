@@ -164,10 +164,10 @@ function Invoke-Setup {
             # DEBUG: Remova o '#' abaixo se quiser ver exatamente onde ele procura
             # Write-Host "`n[ DEBUG ] Tentando: $PathDown" -ForegroundColor Gray
 
-            if (Test-Path $PathCommon -or Test-Path $PathDown) { 
-                $Concluido = $true; 
-                break 
-            } 
+            if ((Test-Path $PathCommon) -or (Test-Path $PathDown)) { 
+    $Concluido = $true
+    break 
+} 
         }
         
         if (-not $Concluido) { Write-Host "." -NoNewline; Start-Sleep -Seconds 3 }
