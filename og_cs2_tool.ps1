@@ -1,7 +1,9 @@
 # ============================================================
 # ONLYGOES INFORMÁTICA E TECNOLOGIA - CS2 ACT (Autoconfig Tool)
 # ============================================================
-$VERSION = "1.1.4" # [AUTO-UPDATE-VERSION]
+# Fix characters
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$VERSION = "1.1.6" # [AUTO-UPDATE-VERSION]
 
 # --- CONFIGURAÇÕES ESTÁTICAS ---
 $APPID      = 730
@@ -12,6 +14,30 @@ $USER_VCFG  = "${APPNAME}_user_convars_0_slot0.vcfg"
 $KEYS_VCFG  = "${APPNAME}_user_keys_0_slot0.vcfg"
 $MACH_VCFG  = "${APPNAME}_machine_convars.vcfg"
 $VIDEO_TXT  = "${APPNAME}_video.txt"
+
+# --- FUNÇÃO DE BANNER ---
+function Show-Banner {
+    Clear-Host
+    $Art = @"
+           ⢠⣴⣶⣤
+     ⣀⣠⣸⣿⣿⡟⣀⣀⣀⣀⣀⣀⣀
+     ⢀⣿⣿⣿⣿⣿⣿⣿⡿⣿⡿⠛⠛⠋
+     ⢀⣸⣿⣿⣿⣿⣿⣿⣿⣷⣿⠃
+⢠⣶⣶⣶⣶⣶⣶⡄⠀⢸⣿⣿⣿⣿⣿⣿⣧⠙⠛⠉⢠⣶⣶⣶⣶⣶⣶⡄
+⢸⣿⣿⠛⠛⠛⠛⠃⠀⠐⣿⣿⣿⣿⣿⣿⡟⠀⠀⠀⢸⣿⡿⠛⠛⠛⠛⠃
+⢸⣿⣿⠀⠀⠀⠀⠀⠀⢠⣿⣿⣿⣿⣿⣧⡀⠀⠀⠀⢸⣿⣿⣶⣶⣶⣶⡆
+⢸⣿⣿⠀⠀⠀⠀⠀⠀⢸⣿⣿⡿⢿⣿⣿⣿⡀⠀⠀⠈⠛⠛⠛⠛⣿⣿⡇
+⢸⣿⣿⣿⣿⣿⣿⡇⠀⢸⣿⣿⠁⠀⠘⢿⣿⣷⠀⠀⢸⣿⣿⣿⣿⣿⣿⡇
+⠈⠉⠉⠉⠉⠉⠉⠁⢠⣿⡟⠁⠀⠀⠀⢠⣿⣿⠀⠀⠈⠉⠉⠉⠉⠉⠉⠁
+           ⢠⣿⣿⠃⠀⠀⠀⠀⠀⣿⣿
+           ⢸⣿⠉⠀⠀⠀⠀⠀⠀⣹⣿⡀
+           ⠸⠿⠀⠀⠀⠀⠀⠀⠀⠛⠛⠛⠃
+"@
+    Write-Host $Art -ForegroundColor Yellow
+    Write-Host "=========================================" -ForegroundColor Cyan
+    Write-Host "      ONLYGOES - CS2 ACT v$VERSION" -ForegroundColor Yellow
+    Write-Host "=========================================" -ForegroundColor Cyan
+}
 
 # --- FUNÇÕES DE SUPORTE ---
 
@@ -174,12 +200,9 @@ function Invoke-Restore {
     Write-Host "`n[OK] Configurações aplicadas para $($Conta.Nick)!" -ForegroundColor Green; Start-Sleep -Seconds 3
 }
 
-# --- MENU PRINCIPAL (Ajustado com default case) ---
+# --- MENU PRINCIPAL ---
 do {
-    Clear-Host
-    Write-Host "=========================================" -ForegroundColor Cyan
-    Write-Host " ONLYGOES - CS2 ACT v$VERSION" -ForegroundColor Yellow
-    Write-Host "=========================================" -ForegroundColor Cyan
+    Show-Banner
     Write-Host " [ 1 ] Extrair configurações (Desktop)"
     Write-Host " [ 2 ] Restaurar configurações (Steam)"
     Write-Host " [ 3 ] Preparar ambiente (Instalação)"
@@ -190,7 +213,13 @@ do {
         '1' { Invoke-Extract }
         '2' { Invoke-Restore }
         '3' { Invoke-Setup }
-        '0' { break }
+        '0' { 
+            Clear-Host
+            Write-Host "`nObrigado por usar as ferramentas OnlyGoes!" -ForegroundColor Cyan
+            Start-Sleep -Seconds 1
+            # Fecha o terminal/powershell completamente
+            Stop-Process -Id $PID 
+        }
         default { 
             Write-Host "`n[ ! ] Opção inválida. Tente novamente..." -ForegroundColor Red
             Start-Sleep -Seconds 2
