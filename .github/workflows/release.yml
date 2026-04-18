@@ -1,4 +1,4 @@
-name: Auto Version Update
+name: Auto Update Version and Changelog
 
 on:
   push:
@@ -6,35 +6,56 @@ on:
       - 'v*'
 
 jobs:
-  update-version:
+  update-files:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
         with:
-          ref: main 
-          fetch-depth: 0
+          fetch-depth: 0 # IMPORTANTE: Baixa o histórico para o robô ler os commits
 
-      - name: Get tag version
-        id: get_version
+      - name: Get Version and Commits
+        id: vars
         run: |
-          # Pega a tag que disparou o evento (ex: v1.1.1) e remove o 'v'
-          TAG=${{ github.ref_name }}
-          echo "VERSION=${TAG#v}" >> $GITHUB_OUTPUT
+          # Extrai a versão da Tag
+          TAG=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+          # Tenta encontrar a tag anterior para comparar
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          # Se houver tag anterior, pega os commits entre elas. Se não, pega todos.
+          if [ -z "$PREV_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"- %s")
+          else
+            COMMITS=$(git log $PREV_TAG..HEAD --pretty=format:"- %s")
+          fi
+          
+          # Limpa caracteres que podem quebrar o script e salva os commits
+          echo "commits<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMITS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Update Version in PowerShell script
+      - name: Update og_cs2_tool.ps1
         run: |
-          sed -i 's/\$VERSION = ".*" # \[AUTO-UPDATE-VERSION\]/\$VERSION = "${{ steps.get_version.outputs.VERSION }}" # [AUTO-UPDATE-VERSION]/' og_cs2_tool.ps1
+          sed -i "s/\$VERSION = \".*\" # \[AUTO-UPDATE-VERSION\]/\$VERSION = \"${{ steps.vars.outputs.version }}\" # \[AUTO-UPDATE-VERSION\]/g" og_cs2_tool.ps1
 
       - name: Update CHANGELOG.md
         run: |
-          sed -i "4i ## [${{ steps.get_version.outputs.VERSION }}] - $(date +'%Y-%m-%d')\n### Atualização automática via Tag\n" CHANGELOG.md
+          DATE=$(date +'%Y-%m-%d')
+          # Cria a entrada formatada com a versão, data e os commits reais
+          echo -e "## [${{ steps.vars.outputs.version }}] - $DATE\n${{ steps.vars.outputs.commits }}\n\n$(cat CHANGELOG.md)" > CHANGELOG.md
+          # Remove duplicatas de cabeçalho (se o comando acima repetir o título)
+          sed -i '1{/^# Changelog/d}' CHANGELOG.md
+          # Garante que o título esteja no topo
+          sed -i '1i # Changelog - CS2 ACT (Autoconfig Tool)\n' CHANGELOG.md
 
       - name: Commit and Push changes
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          branch: main
-          commit_message: "chore: bump version to ${{ steps.get_version.outputs.VERSION }} [skip ci]"
-          file_pattern: 'og_cs2_tool.ps1 CHANGELOG.md'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add og_cs2_tool.ps1 CHANGELOG.md
+          # O [skip ci] evita que o robô entre em loop infinito
+          git commit -m "chore: atualizando para v${{ steps.vars.outputs.version }} [skip ci]"
+          git push origin main
