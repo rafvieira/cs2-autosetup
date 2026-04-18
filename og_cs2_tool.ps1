@@ -3,7 +3,7 @@
 # ============================================================
 # Fix characters
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$VERSION = "1.1.7" # [AUTO-UPDATE-VERSION]
+$VERSION = "1.1.9" # [AUTO-UPDATE-VERSION]
 
 # --- CONFIGURAÇÕES ESTÁTICAS ---
 $APPID      = 730
@@ -41,7 +41,7 @@ function Show-Intro {
 ⠀⠀⠀⠀⠀⠀⠀⠸⠿⠀⠀⠀⠀⠀⠀⠀⠛⠛⠛⠃
 "@
     Write-Host "`n$Art" -ForegroundColor Yellow
-    Write-Host "`n      INICIALIZANDO CS2 ACT v$VERSION..." -ForegroundColor Cyan
+    Write-Host "`n      INICIALIZANDO CS2 AutoConfig Tool" -ForegroundColor Cyan
     Start-Sleep -Seconds 3
     Clear-Host
 }
@@ -120,14 +120,14 @@ function Invoke-Setup {
         $SteamExe = Join-Path $PathNoRegistro "steam.exe"
     }
 
-    #2. Aguardar Login Real
+    # 2. Aguardar Login Real (Sem travas)
     Write-Host "`n[ !!! ] Aguardando login na Steam..." -ForegroundColor Yellow
     if (-not (Get-Process "steam" -ErrorAction SilentlyContinue)) { Start-Process $SteamExe }
 
     Write-Host "Status: Sincronizando" -NoNewline
     while ($true) {
-        $RegPID = (Get-ItemPropertyValue $ActiveReg pid -ErrorAction SilentlyContinue)
-        $ActiveUser = (Get-ItemPropertyValue $ActiveReg ActiveUser -ErrorAction SilentlyContinue)
+        $RegPID = (Get-ItemPropertyValue "HKCU:\Software\Valve\Steam\ActiveProcess" pid -ErrorAction SilentlyContinue)
+        $ActiveUser = (Get-ItemPropertyValue "HKCU:\Software\Valve\Steam\ActiveProcess" ActiveUser -ErrorAction SilentlyContinue)
         $ActualPIDs = (Get-Process "steam" -ErrorAction SilentlyContinue).Id
         if ($ActualPIDs -contains $RegPID -and $ActiveUser -and $ActiveUser -ne 0) { 
             Write-Host " [ CONECTADO ]" -ForegroundColor Green
@@ -137,31 +137,31 @@ function Invoke-Setup {
         Start-Sleep -Seconds 2
     }
 
-    # 3. Disparar instalação (Sem pausa manual agora!)
+    # 3. Disparar instalação (Sem Read-Host!)
     try {
-        Write-Host "`n[ !!! ] Disparando instalação do CS2..." -ForegroundColor Yellow
+        Write-Host "`n[ !!! ] Disparando comando de instalação..." -ForegroundColor Yellow
         Start-Process "steam://install/730" -ErrorAction Stop
-        # Removido o Read-Host daqui para fluir direto para o monitoramento
     } catch {
         Write-Host "`n[ ERRO ] Falha no protocolo. Retornando..." -ForegroundColor Red
         Start-Sleep -Seconds 3
         return
     }
     
-    # 4. Monitoramento de pastas
-    Write-Host "`nMonitorando estrutura de pastas do jogo..." -ForegroundColor Cyan
+    # 4. Monitoramento Eager (Detectou a pasta? Já libera!)
+    Write-Host "`nMonitorando criação das pastas do jogo..." -ForegroundColor Cyan
     $Concluido = $false
     while (-not $Concluido) {
-        $CurrentSteamP = (Get-ItemPropertyValue $SteamReg SteamPath -ErrorAction SilentlyContinue)
+        $CurrentSteamP = (Get-ItemPropertyValue "HKCU:\SOFTWARE\Valve\Steam" SteamPath -ErrorAction SilentlyContinue)
         if ($CurrentSteamP -and (Test-Path "$CurrentSteamP\steamapps\libraryfolders.vdf")) {
             $Libs = Get-Content "$CurrentSteamP\steamapps\libraryfolders.vdf" | Where-Object {$_ -like '*:\*'} | ForEach-Object { (Resolve-Path ($_ -split '"',5)[3]).Path }
             foreach ($L in $Libs) { 
+                # Se a pasta cfg existir, não importa se o jogo baixou tudo, já estamos prontos!
                 if (Test-Path "$L\steamapps\common\$INSTALLDIR\game\$MOD\cfg") { $Concluido = $true; break } 
             }
         }
-        if (-not $Concluido) { Write-Host "." -NoNewline; Start-Sleep -Seconds 5 }
+        if (-not $Concluido) { Write-Host "." -NoNewline; Start-Sleep -Seconds 3 }
     }
-    Write-Host "`n[ OK ] Ambiente pronto para receber configurações!" -ForegroundColor Green
+    Write-Host "`n[ OK ] Pasta de configurações detectada! Pronto para Restore." -ForegroundColor Green
     Start-Sleep -Seconds 3
 }
 
@@ -217,7 +217,7 @@ function Invoke-Restore {
 # --- INÍCIO DO SCRIPT ---
 Show-Intro
 
-# --- MENU PRINCIPAL ---
+# --- MENU PRINCIPAL (Garantindo limpeza de tela) ---
 do {
     Show-MenuHeader
     Write-Host " [ 1 ] Extrair configurações (Desktop)"
