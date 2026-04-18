@@ -1,7 +1,7 @@
 # ============================================================
 # ONLYGOES INFORMÁTICA E TECNOLOGIA - CS2 ACT (Autoconfig Tool)
 # ============================================================
-# Fix characters
+# Fix characters (Garante UTF-8 para o banner Braille)
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $VERSION = "1.1.9" # [AUTO-UPDATE-VERSION]
 
@@ -15,16 +15,10 @@ $KEYS_VCFG  = "${APPNAME}_user_keys_0_slot0.vcfg"
 $MACH_VCFG  = "${APPNAME}_machine_convars.vcfg"
 $VIDEO_TXT  = "${APPNAME}_video.txt"
 
-# ============================================================
-# ONLYGOES INFORMÁTICA E TECNOLOGIA - CS2 ACT (Autoconfig Tool)
-# ============================================================
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$VERSION = "1.1.9" # [AUTO-UPDATE-VERSION]
-
 # --- FUNÇÃO DE INTRODUÇÃO (SPLASH SCREEN) ---
 function Show-Intro {
     Clear-Host
-    # Arte re-alinhada para simetria
+    # Arte re-alinhada
     $Art = @"
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣴⣶⣤⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣠⣸⣿⣿⡟⣀⣀⣀⣀⣀⣀⣀⠀⠀⠀⠀
@@ -41,7 +35,7 @@ function Show-Intro {
 ⠀⠀⠀⠀⠀⠀⠀⠸⠿⠀⠀⠀⠀⠀⠀⠀⠛⠛⠛⠃
 "@
     Write-Host "`n$Art" -ForegroundColor Yellow
-    Write-Host "`n      INICIALIZANDO CS2 AutoConfig Tool" -ForegroundColor Cyan
+    Write-Host "`n INICIALIZANDO CS2 AutoConfig Tool" -ForegroundColor Cyan
     Start-Sleep -Seconds 3
     Clear-Host
 }
