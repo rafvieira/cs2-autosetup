@@ -38,13 +38,26 @@ function Get-ContasSteam {
 
 function Escolher-Conta {
     $Contas = Get-ContasSteam
-    if (-not $Contas) { Write-Host "ERRO: Nenhuma conta Steam encontrada." -ForegroundColor Red; return $null }
+    
+    # Adicionada a verificação estrita de Count -eq 0 e a pausa solicitada
+    if (-not $Contas -or $Contas.Count -eq 0) { 
+        Write-Host "`n[ ERRO ] Nenhuma conta da Steam com dados locais do CS2 foi encontrada nesta máquina." -ForegroundColor Red
+        Read-Host "Pressione ENTER para voltar ao menu principal..."
+        return $null 
+    }
+    
     Write-Host "`n=============================================" -ForegroundColor Cyan
     Write-Host " SELECIONE A CONTA" -ForegroundColor Yellow
     Write-Host "=============================================" -ForegroundColor Cyan
     for ($i=0; $i -lt $Contas.Count; $i++) { Write-Host " [ $($i+1) ] - $($Contas[$i].Nick) ($($Contas[$i].ID))" }
-    $sel = Read-Host "`nDigite o número"
-    if ($sel -match '^\d+$' -and $sel -gt 0 -and $sel -le $Contas.Count) { return $Contas[[int]$sel-1] }
+    
+    $sel = Read-Host "`nDigite o número da conta"
+    if ($sel -match '^\d+$' -and $sel -gt 0 -and $sel -le $Contas.Count) { 
+        return $Contas[[int]$sel-1] 
+    }
+    
+    Write-Host "`n[ ERRO ] Opção inválida!" -ForegroundColor Red
+    Read-Host "Pressione ENTER para tentar novamente..."
     return $null
 }
 
