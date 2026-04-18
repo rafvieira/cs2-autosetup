@@ -136,7 +136,6 @@ function Invoke-Restore {
 # --- MENU PRINCIPAL ---
 do {
     # Clear-Host  <-- DEBUG MODE!
-    Clear-Host
     Write-Host "=========================================" -ForegroundColor Cyan
     Write-Host " ONLYGOES - CS2 AUTOCONFIG TOOL" -ForegroundColor Yellow
     Write-Host "=========================================" -ForegroundColor Cyan
