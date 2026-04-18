@@ -2,7 +2,7 @@
 # ONLYGOES INFORMÁTICA E TECNOLOGIA - CS2 ACT (Autoconfig Tool)
 # ============================================================
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$VERSION = "1.2.7.1" # [AUTO-UPDATE-VERSION]
+$VERSION = "1.2.8" # [AUTO-UPDATE-VERSION]
 
 # --- CONFIGURAÇÕES ESTÁTICAS ---
 $APPID      = 730
@@ -13,6 +13,27 @@ $USER_VCFG  = "${APPNAME}_user_convars_0_slot0.vcfg"
 $KEYS_VCFG  = "${APPNAME}_user_keys_0_slot0.vcfg"
 $MACH_VCFG  = "${APPNAME}_machine_convars.vcfg"
 $VIDEO_TXT  = "${APPNAME}_video.txt"
+
+# --- FUNÇÃO DE SONDA DE HARDWARE (NOVO v1.2.8) ---
+function Get-GpuHardwareInfo {
+    try {
+        # Busca todas as GPUs e seleciona a que possui mais VRAM (Performance)
+        $Gpu = Get-CimInstance Win32_VideoController -ErrorAction Stop | 
+               Sort-Object AdapterRAM -Descending | 
+               Select-Object -First 1
+
+        if ($Gpu.PNPDeviceID -match 'VEN_([0-9A-F]{4})&DEV_([0-9A-F]{4})') {
+            return @{
+                Vendor = [Convert]::ToInt32($matches[1], 16)
+                Device = [Convert]::ToInt32($matches[2], 16)
+                Name   = $Gpu.Name
+            }
+        }
+    } catch { 
+        return $null 
+    }
+    return $null
+}
 
 # --- FUNÇÃO DE INTRODUÇÃO (SPLASH SCREEN) ---
 function Show-Intro {
@@ -209,7 +230,7 @@ function Invoke-Extract {
 
     $sb.ToString() | Out-File -LiteralPath $OutputFile -Encoding UTF8 -Force
     
-    # HOTFIX UX v1.2.7.1
+    # HOTFIX UX v1.2.7.1 mantido
     Write-Host "`nBackup de configurações da conta `"$($Conta.ID)`", BOT `"$($Conta.Nick)`" concluído com sucesso." -ForegroundColor Green
     Write-Host "Arquivo salvo na área de trabalho." -ForegroundColor Cyan
     Start-Sleep -Seconds 4
@@ -276,6 +297,27 @@ function Invoke-Restore {
     if ($RawData -match "---ONLYGOES-VIDEO-START---") {
         $VideoPart = ($RawData -split "---ONLYGOES-VIDEO-START---")[1]
         $VideoContent = ($VideoPart -split "---ONLYGOES-VIDEO-END---")[0].Trim()
+        
+        # --- NOVO v1.2.8: LÓGICA DE PATCH DE GPU ---
+        $GpuInfo = Get-GpuHardwareInfo
+        if ($null -ne $GpuInfo) {
+            Write-Host "[ PATCH ] Adaptando vídeo para: $($GpuInfo.Name)..." -ForegroundColor Cyan
+            
+            # Substitui os IDs gravados no backup pelos IDs do hardware atual da máquina
+            $VideoContent = $VideoContent -replace '"VendorID"\s+"\d+"', "`"VendorID`"`t`"`t`"$($GpuInfo.Vendor)`""
+            $VideoContent = $VideoContent -replace '"DeviceID"\s+"\d+"', "`"DeviceID`"`t`"`t`"$($GpuInfo.Device)`""
+            
+            # Força o AutoConfig para 0 para impedir o CS2 de resetar as configurações
+            if ($VideoContent -match '"Auto[Cc]onfig"\s+"\d+"') {
+                $VideoContent = $VideoContent -replace '"Auto[Cc]onfig"\s+"\d+"', "`"AutoConfig`"`t`"`t`"0`""
+            } else {
+                $VideoContent = $VideoContent -replace '\}$', "`t`"AutoConfig`"`t`"`t`"0`"`n}"
+            }
+        } else {
+            Write-Host "[ AVISO ] Não foi possível ler a GPU local. Restaurando vídeo sem patch." -ForegroundColor Yellow
+        }
+        # ---------------------------------------------
+
         $VideoContent | Out-File -LiteralPath (Join-Path $Destino $VIDEO_TXT) -Encoding UTF8 -Force
         Write-Host "[ OK ] Configurações de vídeo restauradas!" -ForegroundColor Green
     }
