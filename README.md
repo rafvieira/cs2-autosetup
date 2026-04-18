@@ -38,8 +38,8 @@ As contribuições são bem-vindas! Sinta-se à vontade para abrir uma issue ou 
 ## 🙏 Agradecimentos
 
 - Agradecimentos especiais a todos que contribuíram para este projeto.
-@Frog
 
+@Frog
 
 ## 📄 Copyright
 

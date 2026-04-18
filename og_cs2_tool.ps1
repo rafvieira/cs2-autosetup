@@ -78,21 +78,21 @@ function Invoke-Extract {
     if (-not $Conta) { return }
     
     $SteamPath = (Get-ItemPropertyValue "HKCU:\SOFTWARE\Valve\Steam" SteamPath)
-    $USRLOCAL = "$($Conta.Path)\$using:APPID\local"
+    $USRLOCAL = "$($Conta.Path)\$APPID\local"
     $autoexec = "$([Environment]::GetFolderPath('Desktop'))\autoexec.cfg"
     
     # Localizar a pasta do jogo para pegar arquivos globais
     $GamePath = $null
     $Libs = Get-Content "$SteamPath\steamapps\libraryfolders.vdf" -ErrorAction SilentlyContinue | Where-Object {$_ -like '*:\*'} | ForEach-Object { (Resolve-Path ($_ -split '"',5)[3]).Path }
-    foreach ($L in $Libs) { if (Test-Path "$L\steamapps\common\$using:INSTALLDIR\game\$using:MOD") { $GamePath = "$L\steamapps\common\$using:INSTALLDIR\game\$using:MOD"; break } }
+    foreach ($L in $Libs) { if (Test-Path "$L\steamapps\common\$INSTALLDIR\game\$MOD") { $GamePath = "$L\steamapps\common\$INSTALLDIR\game\$MOD"; break } }
 
-    # Sincronização Temporária (Antiga Seção 5)
+    # Sincronização Temporária
     $tempDir = "$env:temp\cs2_extract"
     New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
-    if ($GamePath) { robocopy "$GamePath\cfg/" "$tempDir/" $using:USER_VCFG $using:KEYS_VCFG $using:MACH_VCFG $using:VIDEO_TXT /XO | Out-Null }
-    if (Test-Path "$USRLOCAL\cfg") { robocopy "$USRLOCAL\cfg/" "$tempDir/" $using:USER_VCFG $using:KEYS_VCFG $using:MACH_VCFG $using:VIDEO_TXT /XO | Out-Null }
+    if ($GamePath) { robocopy "$GamePath\cfg/" "$tempDir/" $USER_VCFG $KEYS_VCFG $MACH_VCFG $VIDEO_TXT /XO | Out-Null }
+    if (Test-Path "$USRLOCAL\cfg") { robocopy "$USRLOCAL\cfg/" "$tempDir/" $USER_VCFG $KEYS_VCFG $MACH_VCFG $VIDEO_TXT /XO | Out-Null }
 
-    # Processamento e Geração (Seções 6 a 9)
+    # Processamento e Geração
     $sb = New-Object System.Text.StringBuilder
     [void]$sb.AppendLine("// OnlyGoes Autoexec - Conta: $($Conta.Nick)")
     
@@ -111,9 +111,9 @@ function Invoke-Extract {
         }
     }
 
-    Parse-VCFG "$tempDir\$using:KEYS_VCFG" "BINDS" "bind"
-    Parse-VCFG "$tempDir\$using:USER_VCFG" "USER CONVARS"
-    Parse-VCFG "$tempDir\$using:MACH_VCFG" "MACHINE SETTINGS"
+    Parse-VCFG "$tempDir\$KEYS_VCFG" "BINDS" "bind"
+    Parse-VCFG "$tempDir\$USER_VCFG" "USER CONVARS"
+    Parse-VCFG "$tempDir\$MACH_VCFG" "MACHINE SETTINGS"
 
     $sb.ToString() | Set-Content $autoexec -Force
     Write-Host "`n[OK] Autoexec gerado no Desktop!" -ForegroundColor Green; Start-Sleep -Seconds 3
@@ -126,7 +126,7 @@ function Invoke-Restore {
     $Conta = Escolher-Conta
     if (-not $Conta) { return }
     
-    $Destino = "$($Conta.Path)\$using:APPID\local\cfg"
+    $Destino = "$($Conta.Path)\$APPID\local\cfg"
     if (-not (Test-Path $Destino)) { New-Item -ItemType Directory -Force -Path $Destino | Out-Null }
     
     Copy-Item -Path $Autoexec -Destination "$Destino\autoexec.cfg" -Force
@@ -135,6 +135,7 @@ function Invoke-Restore {
 
 # --- MENU PRINCIPAL ---
 do {
+    # Clear-Host  <-- DEBUG MODE!
     Clear-Host
     Write-Host "=========================================" -ForegroundColor Cyan
     Write-Host " ONLYGOES - CS2 AUTOCONFIG TOOL" -ForegroundColor Yellow
