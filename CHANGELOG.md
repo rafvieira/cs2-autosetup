@@ -1,5 +1,11 @@
 # Changelog - CS2 ACT (Autoconfig Tool)
 
+## [1.2.5] - 2026-04-18
+- Merge branch 'main' of https://github.com/rafvieira/cs2-autosetup
+- ux: ajustes nos textos das funções, melhorias diversas na interface v1.2.5
+- chore: v1.2.4 liberada pelo Bot Zed [skip ci]
+
+
 ## [1.2.4] - 2026-04-18
 - ux: aumenta tempo de exibição da confirmação de restore v1.2.4
 - chore: v1.2.3 liberada pelo Bot Zed [skip ci]
