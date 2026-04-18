@@ -19,7 +19,7 @@ $VIDEO_TXT  = "${APPNAME}_video.txt"
 # ONLYGOES INFORMÁTICA E TECNOLOGIA - CS2 ACT (Autoconfig Tool)
 # ============================================================
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$VERSION = "1.1.7" # [AUTO-UPDATE-VERSION]
+$VERSION = "1.1.9" # [AUTO-UPDATE-VERSION]
 
 # --- FUNÇÃO DE INTRODUÇÃO (SPLASH SCREEN) ---
 function Show-Intro {
