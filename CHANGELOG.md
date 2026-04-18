@@ -1,5 +1,10 @@
 # Changelog - CS2 ACT (Autoconfig Tool)
 
+## [1.2.4] - 2026-04-18
+- ux: aumenta tempo de exibição da confirmação de restore v1.2.4
+- chore: v1.2.3 liberada pelo Bot Zed [skip ci]
+
+
 ## [1.2.3] - 2026-04-18
 - feat: implementação da lógica de Ataque Rápido v1.2.3
 - chore: v1.2.2 liberada pelo Bot Zed [skip ci]
