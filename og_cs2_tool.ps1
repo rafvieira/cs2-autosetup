@@ -33,7 +33,7 @@ function Show-Intro {
 ⠀⠀⠀⠀⠀⠀⠀⠸⠿⠀⠀⠀⠀⠀⠀⠀⠛⠛⠛⠃
 "@
     Write-Host "`n$Art" -ForegroundColor Yellow
-    Write-Host "`n      INICIALIZANDO CS2 ACT v$VERSION..." -ForegroundColor Cyan
+    Write-Host "`nINICIALIZANDO CS2 AutoConfig Tool v$VERSION..." -ForegroundColor Cyan
     Start-Sleep -Seconds 3
 }
 
@@ -139,19 +139,28 @@ function Invoke-Setup {
         return
     }
     
-    Write-Host "`nMonitorando criação das pastas do jogo..." -ForegroundColor Cyan
+    Write-Host "`nMonitorando criação das pastas (Staging/Final)..." -ForegroundColor Cyan
     $Concluido = $false
     while (-not $Concluido) {
         $CurrentSteamP = (Get-ItemPropertyValue $SteamReg SteamPath -ErrorAction SilentlyContinue)
         if ($CurrentSteamP -and (Test-Path "$CurrentSteamP\steamapps\libraryfolders.vdf")) {
             $Libs = Get-Content "$CurrentSteamP\steamapps\libraryfolders.vdf" | Where-Object {$_ -like '*:\*'} | ForEach-Object { (Resolve-Path ($_ -split '"',5)[3]).Path }
             foreach ($L in $Libs) { 
-                if (Test-Path "$L\steamapps\common\$INSTALLDIR\game\$MOD\cfg") { $Concluido = $true; break } 
+                $PathCommon = "$L\steamapps\common\$INSTALLDIR\game\$MOD\cfg"
+                $PathDown   = "$L\steamapps\downloading\$APPID\game\$MOD\cfg"
+
+                # DEBUG para vermos o robô trabalhando:
+                # Write-Host "`n[ DEBUG ] Check: $PathDown" -ForegroundColor Gray
+
+                if (Test-Path $PathCommon -or Test-Path $PathDown) { 
+                    $Concluido = $true; 
+                    break 
+                } 
             }
         }
         if (-not $Concluido) { Write-Host "." -NoNewline; Start-Sleep -Seconds 3 }
     }
-    Write-Host "`n[ OK ] Pasta detectada! Pronto para configurar." -ForegroundColor Green
+    Write-Host "`n[ OK ] Estrutura detectada! Você já pode tentar o restore do seu autoexec.cfg.." -ForegroundColor Green
     Start-Sleep -Seconds 3
 }
 
@@ -203,9 +212,33 @@ function Invoke-Restore {
     }
     $Conta = Select-Conta
     if (-not $Conta) { return }
-    $Destino = "$($Conta.Path)\$APPID\local\cfg"
+
+    # Tenta descobrir o melhor destino (Common ou Downloading)
+    $SteamPath = (Get-ItemPropertyValue "HKCU:\SOFTWARE\Valve\Steam" SteamPath)
+    $Destino = "$($Conta.Path)\$APPID\local\cfg" # Destino da Conta (Sempre existe se logou)
+    
+    # Destino Global do Jogo
+    $GlobalCfg = $null
+    $Libs = Get-Content "$SteamPath\steamapps\libraryfolders.vdf" -ErrorAction SilentlyContinue | Where-Object {$_ -like '*:\*'} | ForEach-Object { (Resolve-Path ($_ -split '"',5)[3]).Path }
+    
+    foreach ($L in $Libs) {
+        $PathCommon = "$L\steamapps\common\$INSTALLDIR\game\$MOD\cfg"
+        $PathDown   = "$L\steamapps\downloading\$APPID\game\$MOD\cfg"
+        
+        if (Test-Path $PathCommon) { $GlobalCfg = $PathCommon; break }
+        if (Test-Path $PathDown)   { $GlobalCfg = $PathDown; break }
+    }
+
+    # Aplica na pasta da conta (Safe)
     if (-not (Test-Path $Destino)) { New-Item -ItemType Directory -Force -Path $Destino | Out-Null }
     Copy-Item -Path $Autoexec -Destination "$Destino\autoexec.cfg" -Force
+    
+    # Aplica na pasta do jogo (Testing)
+    if ($GlobalCfg) {
+        Copy-Item -Path $Autoexec -Destination "$GlobalCfg\autoexec.cfg" -Force
+        Write-Host "`n[ OK ] Aplicado na pasta do jogo: $GlobalCfg" -ForegroundColor Gray
+    }
+
     Write-Host "`n[ OK ] Configurações aplicadas para $($Conta.Nick)!" -ForegroundColor Green
     Start-Sleep -Seconds 2
 }
