@@ -3,7 +3,7 @@ name: Auto Version Update
 on:
   push:
     tags:
-      - 'v*' # Dispara sempre que você subir uma tag começando com 'v' (ex: v1.2.0)
+      - 'v*'
 
 jobs:
   update-version:
@@ -14,24 +14,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          ref: main 
           fetch-depth: 0
 
       - name: Get tag version
         id: get_version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        run: |
+          # Pega a tag que disparou o evento (ex: v1.1.1) e remove o 'v'
+          TAG=${{ github.ref_name }}
+          echo "VERSION=${TAG#v}" >> $GITHUB_OUTPUT
 
       - name: Update Version in PowerShell script
         run: |
-          # Procura a linha com o comentário alvo e substitui a versão
           sed -i 's/\$VERSION = ".*" # \[AUTO-UPDATE-VERSION\]/\$VERSION = "${{ steps.get_version.outputs.VERSION }}" # [AUTO-UPDATE-VERSION]/' og_cs2_tool.ps1
 
       - name: Update CHANGELOG.md
         run: |
-          # Adiciona a nova versão no topo do Changelog (exemplo simplificado)
           sed -i "4i ## [${{ steps.get_version.outputs.VERSION }}] - $(date +'%Y-%m-%d')\n### Atualização automática via Tag\n" CHANGELOG.md
 
       - name: Commit and Push changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
+          branch: main
           commit_message: "chore: bump version to ${{ steps.get_version.outputs.VERSION }} [skip ci]"
           file_pattern: 'og_cs2_tool.ps1 CHANGELOG.md'
