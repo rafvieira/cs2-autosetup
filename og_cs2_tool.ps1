@@ -2,7 +2,7 @@
 # ONLYGOES INFORMÁTICA E TECNOLOGIA - CS2 ACT (Autoconfig Tool)
 # ============================================================
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$VERSION = "1.2.6.1" # [AUTO-UPDATE-VERSION]
+$VERSION = "1.2.7" # [AUTO-UPDATE-VERSION]
 
 # --- CONFIGURAÇÕES ESTÁTICAS ---
 $APPID      = 730
@@ -152,7 +152,9 @@ function Invoke-Extract {
     $SteamPath = (Get-ItemPropertyValue "HKCU:\SOFTWARE\Valve\Steam" SteamPath)
     $USRLOCAL = "$($Conta.Path)\$APPID\local"
     $DesktopPath = [Environment]::GetFolderPath('Desktop')
-    $OutputFile = Join-Path $DesktopPath "BKP_CFG_$($Conta.Nick).og"
+    
+    # v1.2.7: Nome do arquivo agora usa o SteamID para evitar erro com colchetes []
+    $OutputFile = Join-Path $DesktopPath "BKP_CFG_$($Conta.ID).og"
     
     $GamePath = $null
     $Libs = @($SteamPath)
@@ -178,7 +180,7 @@ function Invoke-Extract {
 
     $sb = New-Object System.Text.StringBuilder
     [void]$sb.AppendLine("// OG_BACKUP_VERSION: $VERSION")
-    [void]$sb.AppendLine("// OnlyGoes Autoexec - Conta: $($Conta.Nick)")
+    [void]$sb.AppendLine("// OnlyGoes Autoexec - Conta: $($Conta.Nick)") # Mantemos o Nick aqui para o menu de Restore
     
     function Read-VCFG($file, $header, $prefix = "") {
         if (Test-Path $file) {
@@ -199,7 +201,6 @@ function Invoke-Extract {
     [void]$sb.AppendLine("`nhost_writeconfig")
     [void]$sb.AppendLine("---ONLYGOES-AUTOEXEC-END---")
 
-    # EMPACOTAMENTO DE VÍDEO
     [void]$sb.AppendLine("---ONLYGOES-VIDEO-START---")
     $VideoFile = "$tempDir\$VIDEO_TXT"
     if (Test-Path $VideoFile) {
@@ -208,10 +209,11 @@ function Invoke-Extract {
     }
     [void]$sb.AppendLine("`n---ONLYGOES-VIDEO-END---")
 
-    # HOTFIX 1.2.6.1: Out-File para garantir encoding universal
-    $sb.ToString() | Out-File -FilePath $OutputFile -Encoding UTF8 -Force
+    # Gravando com LiteralPath para máxima segurança contra caracteres especiais
+    $sb.ToString() | Out-File -LiteralPath $OutputFile -Encoding UTF8 -Force
     
-    Write-Host "`nautoexec.cfg gerado com sucesso, salvo na área de trabalho." -ForegroundColor Green
+    Write-Host "`n[ OK ] Extraído de: $($Conta.Nick)" -ForegroundColor Cyan
+    Write-Host "autoexec.cfg gerado com sucesso, salvo na área de trabalho." -ForegroundColor Green
     Start-Sleep -Seconds 4
 }
 
@@ -226,26 +228,42 @@ function Invoke-Restore {
     }
 
     $SelectedBkp = $null
-    if ($Backups.Count -eq 1) {
-        $SelectedBkp = $Backups[0]
+    
+    # v1.2.7: Mapeamento de backups para exibir Nicks amigáveis em vez de IDs numéricos
+    $BackupMap = @()
+    foreach ($file in $Backups) {
+        # Lê a segunda linha para pegar o nickname que salvamos na extração
+        $HeaderLine = Get-Content -LiteralPath $file.FullName -TotalCount 2 | Select-Object -Last 1
+        $NickInFile = "Desconhecido"
+        if ($HeaderLine -match 'Conta: (.*)') { $NickInFile = $matches[1] }
+        
+        $BackupMap += [PSCustomObject]@{
+            File = $file
+            Nick = $NickInFile
+        }
+    }
+
+    if ($BackupMap.Count -eq 1) {
+        $SelectedBkp = $BackupMap[0].File
     } else {
         Write-Host "`n=============================================" -ForegroundColor Cyan
         Write-Host " SELECIONE O BACKUP (.og)" -ForegroundColor Yellow
         Write-Host "=============================================" -ForegroundColor Cyan
-        for ($i=0; $i -lt $Backups.Count; $i++) { Write-Host " [ $($i+1) ] - $($Backups[$i].Name)" }
+        for ($i=0; $i -lt $BackupMap.Count; $i++) { 
+            Write-Host " [ $($i+1) ] - $($BackupMap[$i].Nick) ($($BackupMap[$i].File.Name))" 
+        }
         Write-Host "`nEscolha o backup: " -NoNewline
         $Key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
         $selB = $Key.Character
         Write-Host $selB
         if ($selB -match '^[1-9]$') {
             $idxB = [int][string]$selB - 1
-            if ($idxB -lt $Backups.Count) { $SelectedBkp = $Backups[$idxB] }
+            if ($idxB -lt $BackupMap.Count) { $SelectedBkp = $BackupMap[$idxB].File }
         }
     }
 
     if (-not $SelectedBkp) { return }
 
-    # Identificar Destinatário
     $ActiveReg = "HKCU:\Software\Valve\Steam\ActiveProcess"
     $SteamID = (Get-ItemPropertyValue $ActiveReg ActiveUser -ErrorAction SilentlyContinue)
     if (-not $SteamID -or $SteamID -eq 0) {
@@ -258,19 +276,16 @@ function Invoke-Restore {
     $Destino = Join-Path $SteamPath "userdata\$SteamID\$APPID\local\cfg"
     if (-not (Test-Path $Destino)) { New-Item -ItemType Directory -Force -Path $Destino | Out-Null }
 
-    # DESEMPACOTAMENTO
     Write-Host "`n[ ATAQUE RÁPIDO ] Plantando configs no perfil do usuário $SteamID..." -ForegroundColor Cyan
-    $RawData = Get-Content -Path $SelectedBkp.FullName -Raw -Encoding UTF8
+    $RawData = Get-Content -LiteralPath $SelectedBkp.FullName -Raw -Encoding UTF8
     
-    # Extrair Autoexec
     $AutoContent = ($RawData -split "---ONLYGOES-AUTOEXEC-END---")[0]
-    $AutoContent | Out-File -FilePath (Join-Path $Destino "autoexec.cfg") -Encoding UTF8 -Force
+    $AutoContent | Out-File -LiteralPath (Join-Path $Destino "autoexec.cfg") -Encoding UTF8 -Force
     
-    # Extrair Vídeo
     if ($RawData -match "---ONLYGOES-VIDEO-START---") {
         $VideoPart = ($RawData -split "---ONLYGOES-VIDEO-START---")[1]
         $VideoContent = ($VideoPart -split "---ONLYGOES-VIDEO-END---")[0].Trim()
-        $VideoContent | Out-File -FilePath (Join-Path $Destino $VIDEO_TXT) -Encoding UTF8 -Force
+        $VideoContent | Out-File -LiteralPath (Join-Path $Destino $VIDEO_TXT) -Encoding UTF8 -Force
         Write-Host "[ OK ] Configurações de vídeo restauradas!" -ForegroundColor Green
     }
 
