@@ -65,25 +65,55 @@ function Select-Conta {
 
 function Invoke-Setup {
     $IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-    if (-not $IsAdmin) { Write-Host "`n[ERRO] Execute como ADMINISTRADOR para instalar a Steam." -ForegroundColor Red; Start-Sleep -Seconds 3; return }
-    
-    if (-not (Test-Path "HKCU:\SOFTWARE\Valve\Steam")) {
-        Write-Host "Instalando Steam via Winget..." -ForegroundColor Cyan
-        winget install Valve.Steam --silent --accept-source-agreements --accept-package-agreements | Out-Null
+    if (-not $IsAdmin) { 
+        Write-Host "`n[ ERRO ] Para instalar a Steam, o CS2 ACT precisa de privilégios de Administrador." -ForegroundColor Red
+        Read-Host "Pressione ENTER para voltar..."
+        return 
     }
-    Start-Process "steam://install/730"
-    Read-Host "`nPressione ENTER quando o download do CS2 iniciar na Steam"
     
-    Write-Host "Aguardando pastas do jogo..." -ForegroundColor Cyan
+    # 1. Verificar se a Steam já está no registro
     $SteamReg = "HKCU:\SOFTWARE\Valve\Steam"
-    $SteamP = (Get-ItemPropertyValue $SteamReg SteamPath)
+    if (-not (Test-Path $SteamReg)) {
+        Write-Host "`n[ SETUP ] Steam não detectada. Iniciando instalação via Winget..." -ForegroundColor Cyan
+        
+        # Removemos o Out-Null para você ver o progresso/erro no terminal
+        winget install --id Valve.Steam -e --source winget --silent --accept-source-agreements --accept-package-agreements
+        
+        # Pequena pausa para o Windows registrar o protocolo steam://
+        Write-Host "Aguardando inicialização do sistema..." -NoNewline
+        for ($i=0; $i -lt 5; $i++) { Write-Host "." -NoNewline; Start-Sleep -Seconds 1 }
+    } else {
+        Write-Host "`n[ OK ] Steam já detectada no sistema." -ForegroundColor Green
+    }
+
+    # 2. Tentar disparar o comando do CS2 com tratamento de erro
+    try {
+        Write-Host "`n[ !!! ] Disparando instalação do CS2 via Steam..." -ForegroundColor Yellow
+        Start-Process "steam://install/730" -ErrorAction Stop
+        Read-Host "`nPressione ENTER apenas quando o download do CS2 aparecer na Steam"
+    } catch {
+        Write-Host "`n[ ERRO ] Não foi possível iniciar a Steam automaticamente." -ForegroundColor Red
+        Write-Host "Causa provável: A instalação do Winget falhou ou exige reinicialização do terminal." -ForegroundColor Yellow
+        Write-Host "Sugestão: Abra a Steam manualmente uma vez e tente novamente."
+        Read-Host "`nPressione ENTER para voltar ao menu..."
+        return
+    }
+    
+    # 3. Monitoramento de pastas
+    Write-Host "Monitorando estrutura de pastas do jogo..." -ForegroundColor Cyan
     $Concluido = $false
     while (-not $Concluido) {
-        $Libs = Get-Content "$SteamP\steamapps\libraryfolders.vdf" -ErrorAction SilentlyContinue | Where-Object {$_ -like '*:\*'} | ForEach-Object { (Resolve-Path ($_ -split '"',5)[3]).Path }
-        foreach ($L in $Libs) { if (Test-Path "$L\steamapps\common\$using:INSTALLDIR\game\$using:MOD\cfg") { $Concluido = $true; break } }
+        $SteamP = (Get-ItemPropertyValue $SteamReg SteamPath -ErrorAction SilentlyContinue)
+        if ($SteamP) {
+            $Libs = Get-Content "$SteamP\steamapps\libraryfolders.vdf" -ErrorAction SilentlyContinue | Where-Object {$_ -like '*:\*'} | ForEach-Object { (Resolve-Path ($_ -split '"',5)[3]).Path }
+            foreach ($L in $Libs) { 
+                if (Test-Path "$L\steamapps\common\$INSTALLDIR\game\$MOD\cfg") { $Concluido = $true; break } 
+            }
+        }
         if (-not $Concluido) { Write-Host "." -NoNewline; Start-Sleep -Seconds 5 }
     }
-    Write-Host "`n[OK] Ambiente pronto!" -ForegroundColor Green; Start-Sleep -Seconds 2
+    Write-Host "`n[ OK ] Ambiente pronto para receber configurações!" -ForegroundColor Green
+    Start-Sleep -Seconds 3
 }
 
 function Invoke-Extract {
