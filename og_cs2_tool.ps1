@@ -36,7 +36,7 @@ function Get-ContasSteam {
     return $Contas
 }
 
-function Escolher-Conta {
+function Select-Conta {
     $Contas = Get-ContasSteam
     
     # Adicionada a verificação estrita de Count -eq 0 e a pausa solicitada
@@ -87,7 +87,7 @@ function Invoke-Setup {
 }
 
 function Invoke-Extract {
-    $Conta = Escolher-Conta
+    $Conta = Select-Conta
     if (-not $Conta) { return }
     
     $SteamPath = (Get-ItemPropertyValue "HKCU:\SOFTWARE\Valve\Steam" SteamPath)
@@ -110,7 +110,7 @@ function Invoke-Extract {
     [void]$sb.AppendLine("// OnlyGoes Autoexec - Conta: $($Conta.Nick)")
     
     # Funçao auxiliar para ler VCFG
-    function Parse-VCFG($file, $header, $prefix = "") {
+    function Read-VCFG($file, $header, $prefix = "") {
         if (Test-Path $file) {
             [void]$sb.AppendLine("`n// $header")
             Get-Content $file | ForEach-Object {
@@ -124,9 +124,9 @@ function Invoke-Extract {
         }
     }
 
-    Parse-VCFG "$tempDir\$KEYS_VCFG" "BINDS" "bind"
-    Parse-VCFG "$tempDir\$USER_VCFG" "USER CONVARS"
-    Parse-VCFG "$tempDir\$MACH_VCFG" "MACHINE SETTINGS"
+    Read-VCFG "$tempDir\$KEYS_VCFG" "BINDS" "bind"
+    Read-VCFG "$tempDir\$USER_VCFG" "USER CONVARS"
+    Read-VCFG "$tempDir\$MACH_VCFG" "MACHINE SETTINGS"
 
     $sb.ToString() | Set-Content $autoexec -Force
     Write-Host "`n[OK] Autoexec gerado no Desktop!" -ForegroundColor Green; Start-Sleep -Seconds 3
@@ -136,7 +136,7 @@ function Invoke-Restore {
     $Autoexec = "$([Environment]::GetFolderPath('Desktop'))\autoexec.cfg"
     if (-not (Test-Path $Autoexec)) { Write-Host "`n[ERRO] autoexec.cfg não encontrado no Desktop!" -ForegroundColor Red; Start-Sleep -Seconds 3; return }
     
-    $Conta = Escolher-Conta
+    $Conta = Select-Conta
     if (-not $Conta) { return }
     
     $Destino = "$($Conta.Path)\$APPID\local\cfg"
