@@ -1,5 +1,9 @@
 # Changelog - CS2 ACT (Autoconfig Tool)
 
+## [1.2.1] - 2026-04-18
+- chore: v1.2.0 liberada pelo Bot Zed [skip ci]
+
+
 ## [1.2.0] - 2026-04-18
 - ci: permissões de escrita e batismo do Bot Zed
 - feat: v1.2.0 - Menu instantâneo, correção de variáveis e workflow inteligente
