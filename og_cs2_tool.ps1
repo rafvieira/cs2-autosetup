@@ -3,7 +3,7 @@
 # ============================================================
 # Fix characters (Garante UTF-8 para o banner Braille)
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$VERSION = "1.1.9" # [AUTO-UPDATE-VERSION]
+$VERSION = "1.2.0" # [AUTO-UPDATE-VERSION]
 
 # --- CONFIGURAÇÕES ESTÁTICAS ---
 $APPID      = 730
